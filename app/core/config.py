@@ -1,7 +1,6 @@
 from enum import Enum
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
-import secrets
 
 class Settings(BaseSettings):
 	# database configurations
@@ -10,7 +9,7 @@ class Settings(BaseSettings):
 	DATABASE_URL: Optional[str] = None
 
 	# JWT
-	SECRET_KEY: str = secrets.token_urlsafe(32)
+	SECRET_KEY: str
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 

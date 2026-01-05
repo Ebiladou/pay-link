@@ -1,5 +1,4 @@
 import jwt
-from typing import Dict, Optional, Any
 from fastapi import HTTPException
 from datetime import datetime, timedelta, UTC
 from pydantic import EmailStr
@@ -10,20 +9,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 import logging
 
 logger = logging.getLogger(__name__)
-
-# Handle password hashing
-
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def hash_password(password: str):
-    return pwd_context.hash(password)
-
-def verify(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-# JWT tokens
 
 class AuthenticationService:
     def __init__(self):
