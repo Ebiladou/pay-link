@@ -58,9 +58,58 @@ class UserUpdate(BaseModel):
 			}
 		}
 	)
+
+class UserEmailSchema(BaseModel):
+    email: str
+     
+    model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+                "email": "biglads@example.com"
+			}
+		}
+	)
+
+class ResetPasswordSchema(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Reason must be at least 10 characters")
+    
+        special_characters = r"[!@#$%^&*(),.?\":{}|<>]"
+        if not re.search(special_characters, v):
+            raise ValueError("Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)")
+        
+        return v
+     
+    model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"token": "token123",
+				"password": "randomeight@"
+			}
+		}
+	)
 class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class AccessTokenResponse(BaseModel):
+	access_token: str
+	refresh_token: str
+
+	model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiYWJkdWxAeW91bmdlc3QuZGV2IiwiZXhwaXJlcyI6MTY0OTQyMTY5OC42OTUyNDR9.ULOUfgRqhc1An2PtWbhDiWuBmGyi1TNGfr6eNwgJ368",
+				"refresh_token": "eyJ0XXAncu8iJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiYWJkdWxAeW91bmdlc3QuZGV2IiwiZXhwaXJlcyI6MTY0OTQyMTY5OC42OTUyNDR9.ULOUfgRqhc1An2PtWbhDiWuBmGyi1TNGfr6eNwgJ368"
+			}
+		}
+	)

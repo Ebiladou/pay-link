@@ -127,3 +127,5 @@ class AuthenticationService:
             "access_token": new_access_token,
             "token_type": "bearer"
         }
+    
+authentication_service = AuthenticationService()

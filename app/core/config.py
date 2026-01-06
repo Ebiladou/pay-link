@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-	# Redis configuration for task queue
 	REDIS_URL: Optional[str] = "redis://localhost:6379"
+	RESEND_SECRET_KEY: str
 
 	model_config = SettingsConfigDict(env_file=".env")
 
