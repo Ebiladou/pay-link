@@ -14,7 +14,7 @@ class UserCreate(UserBase):
     @classmethod
     def validate_password(cls, v: str) -> str:
         if len(v) < 6:
-            raise ValueError("Reason must be at least 10 characters")
+            raise ValueError("Password must be at least 6 characters")
     
         special_characters = r"[!@#$%^&*(),.?\":{}|<>]"
         if not re.search(special_characters, v):
@@ -64,7 +64,7 @@ class ResetPasswordSchema(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         if len(v) < 6:
-            raise ValueError("Reason must be at least 10 characters")
+            raise ValueError("Password must be at least 6 characters")
     
         special_characters = r"[!@#$%^&*(),.?\":{}|<>]"
         if not re.search(special_characters, v):
