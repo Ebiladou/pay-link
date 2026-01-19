@@ -1,10 +1,9 @@
 from sqlmodel import select
-from typing import List
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from app.core.database import SessionDep
-from app.core.schema import UserCreate, UserEmailSchema, ResetPasswordSchema
+from app.core.schema import UserCreate, UserEmailSchema, ResetPasswordSchema, SignInUser
 from app.core.model import User, Token
-from app.utils.user_utils import hash_password, generate_csrf_token
+from app.utils.user_utils import hash_password, verify_password, generate_csrf_token, validate_csrf
 from app.core.enum import TokenType
 import secrets
 from datetime import datetime, UTC
@@ -13,7 +12,7 @@ from app.services.auth import authentication_service
 
 auth_router = APIRouter(prefix="/auth")
 
-# currently, no actual mail sending service in use, just a mock send to the terminal for development. will be fixed in a minute once I figure how to use resend free tier religiously. 
+blacklisted_tokens = set([])
 
 @auth_router.post("/register")
 async def register(data: UserCreate, session: SessionDep):
@@ -236,4 +235,62 @@ async def complete_reset_password(data: ResetPasswordSchema, session: SessionDep
 		"message": "Password changed successful"
 	}
 
-# login, logout, and refresh route. 
+@auth_router.post("/refresh", dependencies=[Depends(validate_csrf)])
+async def refresh_token(request: Request, response: Response):
+	result = authentication_service.decode_token(request.cookies.get("refresh_token"))
+	if not result:
+		raise HTTPException(status_code=401, detail="Refresh token has expired. Please start a new session.")
+
+	csrf_token = generate_csrf_token()
+
+	response.set_cookie("access_token", result.get("access_token"), httponly=True, secure=True, samesite="none", max_age=86400)
+
+	response.set_cookie("csrf_token", csrf_token,  httponly=False, secure=True, samesite="none", max_age=86400)
+
+	return True
+
+@auth_router.post("/login")
+async def login(response: Response, data: SignInUser, session: SessionDep):
+    result = await session.exec(select(User).where(User.email == data.email))
+    user = result.first()
+
+    if user is None or not verify_password(data.password, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials."
+        )
+    
+    token = authentication_service.create_access_token(user.email)
+    refresh_token = authentication_service.create_access_token(user.email, token_type="refresh_token")
+    csrf_token = generate_csrf_token()
+    
+    response.set_cookie("access_token", token, httponly=True, secure=True, samesite="none", max_age=86400)
+    response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite="none", max_age=604800)
+    response.set_cookie("csrf_token", csrf_token, httponly=False, secure=True, samesite="none", max_age=86400)
+    
+    return {
+		"message": "User signed in successfully",
+		"access_token": token,
+		"refresh_token": refresh_token
+	}
+
+@auth_router.post("/logout")
+async def logout(request: Request, response: Response, session: SessionDep):
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+    csrf_token = request.cookies.get("csrf_token")
+    
+    if access_token:
+        blacklisted_tokens.add(access_token)
+        
+    if refresh_token:
+        blacklisted_tokens.add(refresh_token)
+        
+    if csrf_token:
+        blacklisted_tokens.add(csrf_token)
+
+    response.delete_cookie("access_token", path="/", secure=True, httponly=True, samesite="none")
+    response.delete_cookie("refresh_token", path="/", secure=True, httponly=True, samesite="none")
+    response.delete_cookie("csrf_token", path="/", secure=True, httponly=False, samesite="none")
+
+    return {"message": "Successfully logged out."}

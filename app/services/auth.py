@@ -17,10 +17,10 @@ class AuthenticationService:
         self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         self.refresh_token_expire_days = 7
 
-    def create_access_token(self, user_id: EmailStr, token_type: str = "access"):
+    def create_access_token(self, user_id: EmailStr, token_type: str = "access_token"):
         now = datetime.now(UTC)
 
-        if token_type == "refresh":
+        if token_type == "refresh_token":
             expiry = now + timedelta(days=self.refresh_token_expire_days)
         else:
             expiry = now + timedelta(minutes=self.access_token_expire_minutes)
@@ -36,7 +36,7 @@ class AuthenticationService:
         return token
 
     def create_refresh_token(self, user_id: EmailStr):
-        return self.create_access_token(user_id, token_type="refresh")
+        return self.create_access_token(user_id, token_type="refresh_token")
 
     def decode_token(self, token: str):
         if not token:
@@ -72,7 +72,7 @@ class AuthenticationService:
                 detail="Token validation failed"
             )
 
-    async def verify_jwt(self, token: str, session: AsyncSession, expected_token_type: str = "access"):
+    async def verify_jwt(self, token: str, session: AsyncSession, expected_token_type: str = "access_token"):
         if not token:
             logger.warning("Empty token provided for verification")
             return None
@@ -112,7 +112,7 @@ class AuthenticationService:
         user = await self.verify_jwt(
             refresh_token, 
             session, 
-            expected_token_type="refresh"
+            expected_token_type="refresh_token"
         )
         
         if not user:

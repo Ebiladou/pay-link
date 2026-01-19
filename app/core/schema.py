@@ -35,26 +35,12 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: Optional[str] = None
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Reason must be at least 10 characters")
-    
-        special_characters = r"[!@#$%^&*(),.?\":{}|<>]"
-        if not re.search(special_characters, v):
-            raise ValueError("Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)")
-        
-        return v
 
     model_config = ConfigDict(
 		json_schema_extra={
 			"example": {
 				"name": "Big Lads",
-                "email": "biglads@example.com",
-                "password": "randomeight@"
+                "email": "biglads@example.com"
 			}
 		}
 	)
@@ -113,3 +99,19 @@ class AccessTokenResponse(BaseModel):
 			}
 		}
 	)
+
+class SignInUser(BaseModel):
+	email: EmailStr
+	password: str
+     
+	@field_validator("email")
+	def lowercase_email(cls, v: str) -> str:
+		return v.lower()
+
+	model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"email": "biglads@example.com",
+                "password": "randomeight@"
+			}
+		})
