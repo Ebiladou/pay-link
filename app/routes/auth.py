@@ -4,7 +4,7 @@ from app.core.database import SessionDep
 from app.core.schema import UserCreate, UserEmailSchema, ResetPasswordSchema, SignInUser
 from app.core.model import User, Token
 from app.utils.user_utils import hash_password, verify_password, generate_csrf_token, validate_csrf
-from app.core.enum import TokenType
+from app.core.enum import TokenType, TemplateType
 import secrets
 from datetime import datetime, UTC
 from app.services.emails import email_service
@@ -14,8 +14,8 @@ auth_router = APIRouter(prefix="/auth")
 
 blacklisted_tokens = set([])
 
-@auth_router.post("/register")
-async def register(data: UserCreate, session: SessionDep):
+@auth_router.post("/signup")
+async def register_user(data: UserCreate, session: SessionDep):
     hashed_password = hash_password(data.password)
 
     result = await session.exec(select(User).where(User.email==data.email))
@@ -39,24 +39,36 @@ async def register(data: UserCreate, session: SessionDep):
     token = Token(
         token=generate_token, 
         creator=user.email, 
-        token_type=TokenType.CONFIRM_EMAIL, 
-        created_at=datetime.now(UTC)
+        token_type=TokenType.CONFIRM_EMAIL
     )
 
     session.add(token)
     await session.commit()
 
-    await email_service.send_verification_email(
-        to=user.email,
-        name=user.name,
-        token=generate_token
-    )
+    confirmation_link = f"confirm-email?token={generate_token}"
+
+    try:
+        variables = {
+            "name": user.name.split(" ")[0],
+            "confirmation_link": confirmation_link
+        }
+
+        await email_service.send_email(
+            template_name=TemplateType.VERIFY_EMAIL,
+            subject="Account confirmation - PayLink",
+            email=user.email,
+            name=user.name,
+            variables=variables
+        )
+
+    except Exception as e:
+        raise e
 
     return {
         "message": "Account Registered successfully. Check your email to verify."
     }
 
-@auth_router.get("/confirm")
+@auth_router.get("/confirm-email")
 async def confirm_email(response: Response, token: str, session: SessionDep):
     result = await session.exec(
         select(Token).where(
@@ -129,21 +141,33 @@ async def resend_confirmation_mail(data: UserEmailSchema, session: SessionDep):
     token = Token(
         token=generate_token, 
         creator=user.email, 
-        token_type=TokenType.CONFIRM_EMAIL, 
-        created_at=datetime.now(UTC)
+        token_type=TokenType.CONFIRM_EMAIL
     )
 
     session.add(token)
     await session.commit()
 
-    await email_service.send_verification_email(
-        to=user.email,
-        name=user.name,
-        token=generate_token
-    )
+    confirmation_link = f"confirm-email?token={generate_token}"
+
+    try:
+        variables = {
+            "name": user.name.split(" ")[0],
+            "confirmation_link": confirmation_link
+        }
+
+        await email_service.send_email(
+            template_name=TemplateType.VERIFY_EMAIL,
+            subject="Account confirmation - PayLink",
+            email=user.email,
+            name=user.name,
+            variables=variables
+        )
+
+    except Exception as e:
+        raise e
 
     return {
-        "message": "Confirmation mail snet. Check your email to verify your account."
+        "message": "Confirmation mail sent. Check your email to verify your account."
     }
 
 @auth_router.post("/reset-password-request")
@@ -172,24 +196,37 @@ async def reset_password_link(data: UserEmailSchema, session: SessionDep):
     token = Token(
         token=generate_token, 
         creator=user.email, 
-        token_type=TokenType.CONFIRM_EMAIL, 
+        token_type=TokenType.RESET_PASSWORD, 
         created_at=datetime.now(UTC)
     )
 
     session.add(token)
     await session.commit()
 
-    await email_service.send_password_reset_email(
-        to=user.email,
-        name=user.name,
-        token=generate_token
-    )
+    reset_link = f"password-reset?token={generate_token}"
+
+    try:
+        variables = {
+            "name": user.name.split(" ")[0],
+            "password_reset_link": reset_link
+        }
+
+        await email_service.send_email(
+            template_name=TemplateType.RESET_PASSWORD,
+            subject="Password Reset - PayLink",
+            email=user.email,
+            name=user.name,
+            variables=variables
+        )
+
+    except Exception as e:
+        raise e
 
     return {
         "message": "Check your email for link to change password."
     }
 
-@auth_router.post("/reset-password-complete")
+@auth_router.post("/password-reset")
 async def complete_reset_password(data: ResetPasswordSchema, session: SessionDep):
     result = await session.exec(select(Token).where(Token.token == data.token))
     token_exists = result.first()
@@ -232,7 +269,7 @@ async def complete_reset_password(data: ResetPasswordSchema, session: SessionDep
     await session.commit()
 
     return {
-		"message": "Password changed successful"
+		"message": "Password change successful"
 	}
 
 @auth_router.post("/refresh", dependencies=[Depends(validate_csrf)])

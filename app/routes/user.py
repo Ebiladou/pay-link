@@ -27,6 +27,10 @@ async def update_user(request: Request, data: UserUpdate, session: SessionDep, u
 async def delete_user(request: Request, session: SessionDep, user: User = Depends(require_user)):
     user.deletion_requested = True
     user.updated_at = datetime.now(UTC)
+    
+    # Re: line above.
+    #  I was wondering if a new isolated field to track this time frame should be added to the model, but on second thought, if account is deactivated, that's the last recorded timestamp on the update field since no other operation can be performed. But i'll think about the pitfalls. 
+    
     session.add(user)
     await session.commit()
 
@@ -36,7 +40,7 @@ async def delete_user(request: Request, session: SessionDep, user: User = Depend
 
 @user_router.post("/reactivate")
 async def reactivate_account(session: SessionDep, user: User = Depends(get_current_user)):
-    if not user.deletion_requested:
+    if user.deletion_requested is False:
         raise HTTPException(
             status_code=400,
             detail="Account not deactivated"

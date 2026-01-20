@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 	REDIS_URL: Optional[str] = "redis://localhost:6379"
 	RESEND_SECRET_KEY: str
 
+	MAILERSEND_KEY: str
+
 	model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()

@@ -11,12 +11,12 @@ class User(SQLModel, table=True):
     password: str
     is_active: bool = Field(default=False)
     deletion_requested: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime(UTC))
-    updated_at: datetime = Field(default_factory=datetime(UTC))
+    created_at: datetime = Field(default_factory=datetime.now)  
+    updated_at: datetime = Field(default_factory=datetime.now)  
 
 class Token(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     token: str
     creator: str
     token_type: TokenType
-    created_at: datetime = Field(default_factory=datetime(UTC))
+    created_at: datetime = Field(default_factory=datetime.now)  
