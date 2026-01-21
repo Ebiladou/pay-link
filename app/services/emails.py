@@ -4,18 +4,19 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
 from app.core.config import settings
 from app.core.enum import TemplateType
-from mailersend import Email
+from mailersend import MailerSendClient
+from mailersend.models.email import EmailRequest, EmailContact
 import logging
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
-    def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "test-pzkmgq7yorml059v.mlsender.net", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):
+    def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "MS_yFSoZW@test-pzkmgq7yorml059v.mlsender.net", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):
         self._api_key = api_key
         self._mail_from = mail_from
         self._mail_from_name = mail_from_name
         self._environment = environment
-        self._mailer = Email
+        self._client = MailerSendClient(api_key=self._api_key)
         
         self._template_env = Environment(
             loader=FileSystemLoader(templates_dir),
@@ -24,7 +25,6 @@ class EmailService:
 
     def _render_template(self, template_name: TemplateType, variables: Dict[str, Any]) -> str:
         try:
-            # Render HTML template
             html_template = self._template_env.get_template(template_name.value)
             html_content = html_template.render(**variables)
             
@@ -57,31 +57,26 @@ class EmailService:
             # Render templates
             html_content = self._render_template(template_name, template_variables)
             
-            # Prepare mail
-            mail_from = {
-                "email": self._mail_from,
-                "name": self._mail_from_name,
-            }
+            from_contact = EmailContact(email=self._mail_from, name=self._mail_from_name)
+            to_contacts = [EmailContact(email=email, name=name)]
             
-            recipients = [{"email": email, "name": name}]
-
-            mail_body = {
-                "from_email": mail_from,
-                "to": recipients,
-                "subject": subject,
-                "html": html_content,
-            }
-
-           # self._mailer.send(mail_body)
+            email_request = EmailRequest(
+                from_email=from_contact,
+                to=to_contacts,
+                subject=subject,
+                html=html_content,
+            )
             
-            # Send email
             if self._environment == "prod":
-                response = self._mailer.send(mail_body)
-                logger.info(f"Email '{template_name}' sent to {email}")
-                return True
+                response = self._client.emails.send(email_request)
+                if response.status_code == 202:
+                    logger.info(f"Email sent successfully.")
+                    return True
+                else:
+                    logger.error(f"Failed to send email '{template_name}'. Error: {response.data}")
+                    return False
             else:
                 logger.info(f"Email '{template_name}' would be sent to {email}")
-                logger.info(f"Subject: {subject}")
                 if variables:
                     logger.info(f"Variables: {variables}")
                 return True
