@@ -274,17 +274,26 @@ async def complete_reset_password(data: ResetPasswordSchema, session: SessionDep
 
 @auth_router.post("/refresh", dependencies=[Depends(validate_csrf)])
 async def refresh_token(request: Request, response: Response):
-	result = authentication_service.decode_token(request.cookies.get("refresh_token"))
-	if not result:
-		raise HTTPException(status_code=401, detail="Refresh token has expired. Please start a new session.")
-
-	csrf_token = generate_csrf_token()
-
-	response.set_cookie("access_token", result.get("access_token"), httponly=True, secure=True, samesite="none", max_age=86400)
-
-	response.set_cookie("csrf_token", csrf_token,  httponly=False, secure=True, samesite="none", max_age=86400)
-
-	return True
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing.")
+    
+    payload = authentication_service.decode_token(refresh_token)
+    
+    if payload.get("type") != "refresh_token":
+        raise HTTPException(status_code=401, detail="Invalid token type.")
+    
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid refresh token.")
+    
+    new_access_token = authentication_service.create_access_token(user_id)
+    csrf_token = generate_csrf_token()
+    
+    response.set_cookie("access_token", new_access_token, httponly=True, secure=True, samesite="none", max_age=86400)
+    response.set_cookie("csrf_token", csrf_token, httponly=False, secure=True, samesite="none", max_age=86400)
+    
+    return {"message": "Access token refreshed."}
 
 @auth_router.post("/login")
 async def login(response: Response, data: SignInUser, session: SessionDep):

@@ -4,6 +4,7 @@ from app.routes.auth import auth_router
 from app.routes.user import user_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
+from app.middleware.auth_middleware import AuthMiddleware
 
 ## set up cors later
 
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)
+app.add_middleware(AuthMiddleware)
 
 @app.get("/health")
 def health_check():

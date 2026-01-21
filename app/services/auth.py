@@ -94,7 +94,7 @@ class AuthenticationService:
 
             statement = select(User).where(User.email == user_id)
             result = await session.exec(statement)
-            user = result.scalar_one_or_none()
+            user = result.first()
 
             if not user:
                 logger.warning("User not found")
