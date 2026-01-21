@@ -9,6 +9,7 @@
 - create and register an auth middleware to validates the JWT token from cookies and attach the user to the request.state object.
 - procced with the resend free tier setup for emails / find and register a free provider.
 - implement rate limiter
+- initialize a centralize logger with levels set
 
 ## TESTS
 
