@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.auth_middleware import AuthMiddleware
 from app.workers.email import start_email_worker
+from app.services.queue import rabbitmq
 from app.core.logger import logger
 import threading
 
@@ -42,7 +43,6 @@ def setup_routes(app: FastAPI) -> None:
 _worker_thread = None
 
 def _run_worker():
-	"""Run email worker in a separate thread"""
 	try:
 		start_email_worker()
 	except Exception as e:
@@ -63,7 +63,6 @@ async def lifespan(app: FastAPI):
 	# Shutdown email worker
 	if _worker_thread and _worker_thread.is_alive():
 		logger.info("Shutting down email worker...")
-		from app.services.queue import rabbitmq
 		rabbitmq.close()
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
