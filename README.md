@@ -1,15 +1,40 @@
 # PayLink
 
-A modern FastAPI-based payment link application with asynchronous email processing via RabbitMQ.
+**PayLink** is a modern payment link service that simplifies receiving payments online. It enables users to create shareable payment links that can be sent to customers, clients, or anyone who needs to send money. Instead of complex payment forms or invoices, users can generate a simple link and share it via email, messaging, or social media.
+
+PayLink integrates with **Paystack** to handle secure payment transactions. Users can:
+
+- **Create Payment Links** - Generate unique, shareable links for receiving payments
+- **Multiple Link Types**:
+  - **Closed Links** - Pre-configured with a fixed amount for a specific recipient
+  - **Open Links** - Flexible links where customers can enter custom amounts
+  - **Recurring Links** - Setup automatic payment subscriptions
+- **Instant Payments** - Customers pay directly through the link without creating an account
+- **Payment Tracking** - Monitor all payments, refunds, and transaction history
+
+## Technical Overview
+
+PayLink is built with a modern, scalable architecture:
+
+- **FastAPI Backend** - High-performance Python API framework
+- **Asynchronous Email Processing** - RabbitMQ-based queue for instant user responses
+- **PostgreSQL Database** - Reliable data persistence with async support
+- **Payment Integration** - Secure integration with Paystack
+- **User Authentication** - JWT-based secure authentication with refresh tokens
+- **Production Ready** - Dockerized, logged, and optimized for scale -> # in view
 
 ## Features
 
 - 🔐 **User Authentication** - Secure signup, login, and password reset
+- 💳 **Payment Processing** - Integration with Paystack for secure payments
+- 🔗 **Flexible Link Creation** - Multiple link types (closed, open, recurring, etc.)
+- 📊 **Transaction Tracking** - Real-time payment status and history
 - 📧 **Async Email Queue** - RabbitMQ-based email processing (non-blocking)
 - 🔄 **Background Workers** - Email sending in separate threads
 - 📝 **Centralized Logging** - Environment-aware logging with file rotation
 - 🗄️ **PostgreSQL Database** - Using SQLModel and AsyncPG for async database operations
-- 🎯 **RESTful API** - Clean API endpoints for user management
+- 🎯 **RESTful API** - Clean API endpoints for link and payment management
+- 🔒 **Security First** - HTTPS, CORS protection, secure token handling
 
 ## Architecture
 
@@ -33,12 +58,6 @@ Process message → Send email via MailerSend
 Acknowledge message to queue
 ```
 
-**Benefits:**
-- API responses are instant (no email delays)
-- Emails are processed reliably in background
-- Failed emails are requeued automatically
-- Main application thread never blocked
-
 ## Prerequisites
 
 - Python 3.12+
@@ -50,7 +69,7 @@ Acknowledge message to queue
 
 ### 1. Clone the Repository
 ```bash
-git clone <git@github.com:Ebiladou/pay-link.git>
+git clone git@github.com:Ebiladou/pay-link.git
 cd pay-link
 ```
 
@@ -148,3 +167,7 @@ MIT
 ## Support
 
 For issues and questions, please create an issue in the repository.
+
+## NB:
+
+This is an ongoing slow project. If you run it now, you have nothing but basic features available. 
