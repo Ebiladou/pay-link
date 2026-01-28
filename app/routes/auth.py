@@ -2,12 +2,12 @@ from sqlmodel import select
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from app.core.database import SessionDep
 from app.core.schema import UserCreate, UserEmailSchema, ResetPasswordSchema, SignInUser
-from app.core.model import User, Token
+from app.core.model import Users, Token
 from app.utils.user_utils import hash_password, verify_password, generate_csrf_token, validate_csrf
 from app.core.enum import TokenType, TemplateType
 import secrets
 from datetime import datetime, UTC
-from app.services.emails import email_service
+from app.workers.email import queue_email
 from app.services.auth import authentication_service
 
 auth_router = APIRouter(prefix="/auth")
@@ -18,7 +18,7 @@ blacklisted_tokens = set([])
 async def register_user(data: UserCreate, session: SessionDep):
     hashed_password = hash_password(data.password)
 
-    result = await session.exec(select(User).where(User.email==data.email))
+    result = await session.exec(select(Users).where(Users.email==data.email))
     existing_user = result.first()
     if existing_user is not None:
         raise HTTPException(
@@ -26,7 +26,7 @@ async def register_user(data: UserCreate, session: SessionDep):
             detail="User with this email already exists"
         )
 
-    user = User(
+    user = Users(
         **data.model_dump(exclude={"password"}),
         password=hashed_password
     )
@@ -47,22 +47,18 @@ async def register_user(data: UserCreate, session: SessionDep):
 
     confirmation_link = f"confirm-email?token={generate_token}"
 
-    try:
-        variables = {
-            "name": user.name.split(" ")[0],
-            "confirmation_link": confirmation_link
-        }
+    variables = {
+        "name": user.name.split(" ")[0],
+        "confirmation_link": confirmation_link
+    }
 
-        await email_service.send_email(
-            template_name=TemplateType.VERIFY_EMAIL,
-            subject="Account confirmation - PayLink",
-            email=user.email,
-            name=user.name,
-            variables=variables
-        )
-
-    except Exception as e:
-        raise e
+    await queue_email(
+        template_name=TemplateType.VERIFY_EMAIL,
+        subject="Account confirmation - PayLink",
+        email=user.email,
+        name=user.name,
+        variables=variables
+    )
 
     return {
         "message": "Account Registered successfully. Check your email to verify."
@@ -83,8 +79,8 @@ async def confirm_email(response: Response, token: str, session: SessionDep):
             status_code=400, 
             detail="Invalid token"
         )
-    
-    result = await session.exec(select(User).where(User.email == existing_token.creator))
+
+    result = await session.exec(select(Users).where(Users.email == existing_token.creator))
     user = result.first()
     
     if user is None:
@@ -116,7 +112,7 @@ async def confirm_email(response: Response, token: str, session: SessionDep):
 
 @auth_router.post("/resend-email")
 async def resend_confirmation_mail(data: UserEmailSchema, session: SessionDep):
-    result = await session.exec(select(User).where(User.email == data.email.lower()))
+    result = await session.exec(select(Users).where(Users.email == data.email.lower()))
     user = result.first()
 
     if user is not None:
@@ -149,22 +145,18 @@ async def resend_confirmation_mail(data: UserEmailSchema, session: SessionDep):
 
     confirmation_link = f"confirm-email?token={generate_token}"
 
-    try:
-        variables = {
-            "name": user.name.split(" ")[0],
-            "confirmation_link": confirmation_link
-        }
+    variables = {
+        "name": user.name.split(" ")[0],
+        "confirmation_link": confirmation_link
+    }
 
-        await email_service.send_email(
-            template_name=TemplateType.VERIFY_EMAIL,
-            subject="Account confirmation - PayLink",
-            email=user.email,
-            name=user.name,
-            variables=variables
-        )
-
-    except Exception as e:
-        raise e
+    await queue_email(
+        template_name=TemplateType.VERIFY_EMAIL,
+        subject="Account confirmation - PayLink",
+        email=user.email,
+        name=user.name,
+        variables=variables
+    )
 
     return {
         "message": "Confirmation mail sent. Check your email to verify your account."
@@ -172,7 +164,7 @@ async def resend_confirmation_mail(data: UserEmailSchema, session: SessionDep):
 
 @auth_router.post("/reset-password-request")
 async def reset_password_link(data: UserEmailSchema, session: SessionDep):
-    result = await session.exec(select(User).where(User.email == data.email.lower()))
+    result = await session.exec(select(Users).where(Users.email == data.email.lower()))
     user = result.first()
 
     if user is None:
@@ -205,22 +197,18 @@ async def reset_password_link(data: UserEmailSchema, session: SessionDep):
 
     reset_link = f"password-reset?token={generate_token}"
 
-    try:
-        variables = {
-            "name": user.name.split(" ")[0],
-            "password_reset_link": reset_link
-        }
+    variables = {
+        "name": user.name.split(" ")[0],
+        "password_reset_link": reset_link
+    }
 
-        await email_service.send_email(
-            template_name=TemplateType.RESET_PASSWORD,
-            subject="Password Reset - PayLink",
-            email=user.email,
-            name=user.name,
-            variables=variables
-        )
-
-    except Exception as e:
-        raise e
+    await queue_email(
+        template_name=TemplateType.RESET_PASSWORD,
+        subject="Password Reset - PayLink",
+        email=user.email,
+        name=user.name,
+        variables=variables
+    )
 
     return {
         "message": "Check your email for link to change password."
@@ -251,7 +239,7 @@ async def complete_reset_password(data: ResetPasswordSchema, session: SessionDep
 			detail="Invalid token"
 		)
     
-    result = await session.exec(select(User).where(User.email == token_exists.creator))
+    result = await session.exec(select(Users).where(Users.email == token_exists.creator))
     user = result.first()
 
     if user is None:
@@ -297,7 +285,7 @@ async def refresh_token(request: Request, response: Response):
 
 @auth_router.post("/login")
 async def login(response: Response, data: SignInUser, session: SessionDep):
-    result = await session.exec(select(User).where(User.email == data.email))
+    result = await session.exec(select(Users).where(Users.email == data.email))
     user = result.first()
 
     if user is None or not verify_password(data.password, user.password):

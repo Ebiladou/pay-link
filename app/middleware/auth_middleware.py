@@ -20,6 +20,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 request.state.user = user
         else:
             request.state.user = None
-        
+    
         response = await call_next(request)
         return response

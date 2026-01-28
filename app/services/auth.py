@@ -2,13 +2,11 @@ import jwt
 from fastapi import HTTPException
 from datetime import datetime, timedelta, UTC
 from pydantic import EmailStr
-from app.core.model import User
+from app.core.model import Users
 from app.core.config import settings
+from app.core.logger import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-import logging
-
-logger = logging.getLogger(__name__)
 
 class AuthenticationService:
     def __init__(self):
@@ -92,7 +90,7 @@ class AuthenticationService:
                 logger.warning("Token missing user_id")
                 return None
 
-            statement = select(User).where(User.email == user_id)
+            statement = select(Users).where(Users.email == user_id)
             result = await session.exec(statement)
             user = result.first()
 

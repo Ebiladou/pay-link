@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, UTC
 from app.core.enum import TokenType
 
-class User(SQLModel, table=True):
+class Users(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr = Field(unique=True, index=True)

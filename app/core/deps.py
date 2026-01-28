@@ -1,7 +1,7 @@
 from fastapi import Request, HTTPException
-from app.core.model import User
+from app.core.model import Users
 
-async def get_current_user(request: Request) -> User:
+async def get_current_user(request: Request) -> Users:
     user = getattr(request.state, "user", None)
     if user is None:
         raise HTTPException(
@@ -12,7 +12,7 @@ async def get_current_user(request: Request) -> User:
     return user
 
 
-async def require_user(request: Request) -> User:
+async def require_user(request: Request) -> Users:
     user = getattr(request.state, "user", None)
     
     if user is None:

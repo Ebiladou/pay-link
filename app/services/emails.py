@@ -4,11 +4,9 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
 from app.core.config import settings
 from app.core.enum import TemplateType
+from app.core.logger import logger
 from mailersend import MailerSendClient
 from mailersend.models.email import EmailRequest, EmailContact
-import logging
-
-logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "MS_yFSoZW@test-pzkmgq7yorml059v.mlsender.net", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):

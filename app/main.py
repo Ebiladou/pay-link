@@ -5,6 +5,9 @@ from app.routes.user import user_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.auth_middleware import AuthMiddleware
+from app.workers.email import start_email_worker
+from app.core.logger import logger
+import threading
 
 ## set up cors later
 
@@ -34,11 +37,34 @@ def setup_routes(app: FastAPI) -> None:
 
 	for router, tags, in routes:
 		app.include_router(router, tags=tags)
-		
+
+# Global worker thread
+_worker_thread = None
+
+def _run_worker():
+	"""Run email worker in a separate thread"""
+	try:
+		start_email_worker()
+	except Exception as e:
+		logger.error(f"Email worker error: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+	global _worker_thread
 	await init_db()
+	
+	# Start email worker in background thread
+	_worker_thread = threading.Thread(target=_run_worker, daemon=True)
+	_worker_thread.start()
+	logger.info("Email worker thread started")
+	
 	yield
+	
+	# Shutdown email worker
+	if _worker_thread and _worker_thread.is_alive():
+		logger.info("Shutting down email worker...")
+		from app.services.queue import rabbitmq
+		rabbitmq.close()
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)
