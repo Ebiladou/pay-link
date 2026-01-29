@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 	# database configurations
 	ENVIRONMENT: str
 	REDIRECT_URI: Optional[str] = "localhost:8080"
-	DATABASE_URL: Optional[str] = None
+	DATABASE_URL: str
 
 	# postgres
 	POSTGRES_USER: str
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-	REDIS_URL: Optional[str] = "redis://localhost:6379"
+	REDIS_URL: str = "redis://localhost:6379"
 	RESEND_SECRET_KEY: str
 
 	MAILERSEND_KEY: str
@@ -26,6 +26,10 @@ class Settings(BaseSettings):
 	# rabbitmq
 	RABBITMQ_USER: str = "guest"
 	RABBITMQ_PASSWORD: str = "guest"
+
+	# paystack
+	PAYSTACK_PUBLIC_KEY: str
+	PAYSTACK_SECRET_KEY: str
 
 	model_config = SettingsConfigDict(env_file=".env")
 
