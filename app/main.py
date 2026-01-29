@@ -5,6 +5,7 @@ from app.routes.user import user_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.auth_middleware import AuthMiddleware
+from app.middleware.rate_limiter import RateLimiterMiddleware, RouteRateLimit
 from app.workers.email import start_email_worker
 from app.services.queue import rabbitmq
 from app.core.logger import logger
@@ -67,6 +68,8 @@ async def lifespan(app: FastAPI):
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)
+
+app.add_middleware(RateLimiterMiddleware)
 app.add_middleware(AuthMiddleware)
 
 @app.get("/health")

@@ -35,6 +35,7 @@ PayLink is built with a modern, scalable architecture:
 - 🗄️ **PostgreSQL Database** - Using SQLModel and AsyncPG for async database operations
 - 🎯 **RESTful API** - Clean API endpoints for link and payment management
 - 🔒 **Security First** - HTTPS, CORS protection, secure token handling
+- ⏱️ **Rate Limiting** - Redis-backed per-user rate limiting to prevent abuse
 
 ## Architecture
 
@@ -58,11 +59,44 @@ Process message → Send email via MailerSend
 Acknowledge message to queue
 ```
 
+### Rate Limiting
+
+The application includes per-user rate limiting powered by Redis:
+
+- **Per-User Tracking** - Authenticated users are rate limited by user ID
+- **Per-IP Fallback** - Unauthenticated requests are tracked by IP address
+- **Configurable Limits** - Each route can have custom rate limits
+
+**Default Rate Limits:**
+- `/auth/login` - 5 requests per 60 seconds
+- `/auth/signup` - 3 requests per 60 seconds
+
+**Customizing Rate Limits:**
+
+Edit `app/middleware/rate_limiter.py` and modify `DEFAULT_ROUTES`:
+
+```python
+DEFAULT_ROUTES = [
+    RouteRateLimit(path="/auth/login", requests=5, seconds=60),
+    RouteRateLimit(path="/auth/signup", requests=3, seconds=60),
+]
+```
+
+Or pass custom routes in `app/main.py`:
+
+```python
+rate_limit_routes = [
+    RouteRateLimit(path="/auth/login", requests=10, seconds=60),
+]
+app.add_middleware(RateLimiterMiddleware, routes=rate_limit_routes)
+```
+
 ## Prerequisites
 
 - Python 3.12+
 - PostgreSQL
 - RabbitMQ
+- Redis
 - pip/virtualenv
 
 ## Installation
@@ -102,7 +136,15 @@ docker run -d --name rabbitmq \
 # Default credentials: guest / guest
 ```
 
-### 6. Start the Application
+### 6. Start Redis
+```bash
+# Using Docker (recommended)
+docker run -d --name redis \
+  -p 6379:6379 \
+  redis:7-alpine
+```
+
+### 7. Start the Application
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -125,7 +167,8 @@ pay-link/
 │   │   ├── model.py           # Database models
 │   │   └── schema.py          # Pydantic schemas
 │   ├── middleware/
-│   │   └── auth_middleware.py # Authentication middleware
+│   │   ├── auth_middleware.py # Authentication middleware
+│   │   └── rate_limiter.py    # Rate limiting middleware
 │   ├── routes/
 │   │   ├── auth.py            # Auth endpoints
 │   │   └── user.py            # User endpoints
@@ -170,4 +213,4 @@ For issues and questions, please create an issue in the repository.
 
 ## NB:
 
-This is an ongoing slow project. If you run it now, you have nothing but basic features available. 
+This is an ongoing slow project. If you run it now, you have nothing but basic features available. README powered by AI.

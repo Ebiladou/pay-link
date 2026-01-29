@@ -1,7 +1,6 @@
 import json
 import asyncio
 from typing import Dict, Any, Optional
-
 import pika
 from app.services.queue import rabbitmq, QUEUE_EMAIL
 from app.core.enum import TemplateType
@@ -39,9 +38,6 @@ async def queue_email(
     except Exception as e:
         logger.error(f"Failed to queue email: {e}")
         return False
-
-
-# Consumer Worker
 
 def process_email_message(channel, method, properties, body):
     """Process a single email message from the queue"""

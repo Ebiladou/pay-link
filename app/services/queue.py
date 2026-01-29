@@ -30,7 +30,6 @@ class RabbitMQ:
         return self._channel
 
     def close(self) -> None:
-        """Close connection"""
         if self._connection and not self._connection.is_closed:
             self._connection.close()
             logger.info("RabbitMQ disconnected")

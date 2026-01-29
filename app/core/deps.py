@@ -11,15 +11,8 @@ async def get_current_user(request: Request) -> Users:
     
     return user
 
-
 async def require_user(request: Request) -> Users:
-    user = getattr(request.state, "user", None)
-    
-    if user is None:
-        raise HTTPException(
-            status_code=401, 
-            detail="User not authenticated."
-        )
+    user = await get_current_user(request)
     
     if user.is_active is False:
         raise HTTPException(

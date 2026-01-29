@@ -14,3 +14,6 @@
 ## TESTS
 
 - Write unit tests for the auth endpoints.
+
+## PAYSTACK
+- Set up Paystack service with the relevant endpoints for use
