@@ -8,6 +8,11 @@ class Settings(BaseSettings):
 	REDIRECT_URI: Optional[str] = "localhost:8080"
 	DATABASE_URL: Optional[str] = None
 
+	# postgres
+	POSTGRES_USER: str
+	POSTGRES_PASSWORD: str
+	POSTGRES_DB: str
+
 	# JWT
 	SECRET_KEY: str
 	ALGORITHM: str = "HS256"
@@ -17,6 +22,10 @@ class Settings(BaseSettings):
 	RESEND_SECRET_KEY: str
 
 	MAILERSEND_KEY: str
+
+	# rabbitmq
+	RABBITMQ_USER: str = "guest"
+	RABBITMQ_PASSWORD: str = "guest"
 
 	model_config = SettingsConfigDict(env_file=".env")
 

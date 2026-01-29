@@ -101,51 +101,90 @@ app.add_middleware(RateLimiterMiddleware, routes=rate_limit_routes)
 
 ## Installation
 
-### 1. Clone the Repository
+### Step 0: Clone the Repository
+
 ```bash
 git clone git@github.com:Ebiladou/pay-link.git
 cd pay-link
 ```
 
-### 2. Create Virtual Environment
+### Recommended (Docker quick start)
+
+Run the full development stack (web + Postgres + Redis + RabbitMQ) with `docker-compose`. This is the fastest, most reproducible way to get started.
+
+1. Copy the example environment file and set secrets (do NOT commit your `.env`):
+
+```bash
+cp .env.example .env
+# edit .env and set real secrets (POSTGRES_PASSWORD, SECRET_KEY, etc.)
+```
+
+2. Build and start the stack:
+
+```bash
+docker-compose up --build
+```
+
+3. Stop / remove containers:
+
+```bash
+docker-compose down
+```
+
+Alternative: build and run only the web image (useful for quick iteration):
+
+```bash
+docker build -t paylink-web .
+docker run --rm -p 8000:8000 --env-file .env paylink-web
+```
+Important notes:
+- Keep real secrets out of source control: use `.env` (already ignored) or a secrets manager for production.
+- The provided `docker-compose.yml` reads variables from `.env` (see `DATABASE_URL`, `REDIS_URL`, etc.).
+- For production, replace `--reload` development server and consider a process manager, TLS, and secret management.
+
+### Manual setup (optional)
+
+If you prefer to run services locally without Docker, follow these steps after cloning the repo.
+
+1. Create Virtual Environment
+
 ```bash
 python -m venv env
 source env/bin/activate  # On Windows: env\Scripts\activate
 ```
 
-### 3. Install Dependencies
+2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment
+3. Configure Environment
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-### 5. Start RabbitMQ
+4. Start RabbitMQ (if not using Docker)
+
 ```bash
-# Using Docker (recommended)
+# Install or run RabbitMQ locally; docker run is an option:
 docker run -d --name rabbitmq \
   -p 5672:5672 \
   -p 15672:15672 \
   rabbitmq:4-management
-
-# Access RabbitMQ Management UI: http://localhost:15672
-# Default credentials: guest / guest
 ```
 
-### 6. Start Redis
+5. Start Redis (if not using Docker)
+
 ```bash
-# Using Docker (recommended)
 docker run -d --name redis \
   -p 6379:6379 \
   redis:7-alpine
 ```
 
-### 7. Start the Application
-```bash
+6. Start the Application
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
