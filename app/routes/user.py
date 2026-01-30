@@ -18,6 +18,7 @@ async def update_user(request: Request, data: UserUpdate, session: SessionDep, u
     update_data = data.model_dump(exclude_unset=True)
 
     user.sqlmodel_update(update_data)
+    user.updated_at = datetime.now(UTC)
     session.add(user)
     await session.commit()
 

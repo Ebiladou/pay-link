@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr, model_validator, field_serializer
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 import re
+from app.core.enum import LinkType, LinkStatus, PaystackChannel
 
 class UserBase(BaseModel):
     name: str
@@ -115,3 +116,119 @@ class SignInUser(BaseModel):
                 "password": "randomeight@"
 			}
 		})
+     
+class CreateLinkSchema(BaseModel):
+	title: str
+	description: Optional[str] = None
+	amount: int
+	type: LinkType
+
+	model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"title": "Payment for Service",
+				"description": "Payment link for consulting service",
+				"amount": 5000,
+				"type": "close"
+			}
+		}
+	)
+
+class UpdateLinkSchema(BaseModel):
+	title: Optional[str] = None
+	description: Optional[str] = None
+	amount: Optional[int] = None
+	type: Optional[LinkType] = None
+
+	model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"title": "Updated Payment for Service",
+				"description": "Updated payment link for consulting service",
+				"amount": 6000,
+				"type": "open"
+			}
+		}
+	)
+     
+class LinkResponse(BaseModel):
+    id: int
+    creator: int
+    token: str
+    title: str
+    description: Optional[str] = None
+    amount: int
+    type: LinkType
+    status: LinkStatus
+    created_at: datetime
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+				"id": 1,
+				"creator": 1,
+				"token": "mkjk867bnsdy78879snb789909u89090fhjjk",
+				"title": "Payment for Service",
+				"description": "Payment link for consulting service",
+				"amount": 5000,
+				"type": "close",
+				"status": "active",
+				"created_at": "2023-01-01T00:00:00Z"
+			}
+		}
+	)
+    
+class BankCreateSchema(BaseModel):
+    account_number: str
+    bank_code: str 
+    
+    model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+                "account_number": "1234567890",
+				"bank_code": "058"	
+			}
+		}
+	)
+    
+class SubAccountCreateSchema(BaseModel):
+	business_name: str
+	settlement_bank: str
+	account_number: str
+	percentage_charge: float = 0.5
+	
+	model_config = ConfigDict(
+		json_schema_extra={
+			"example": {
+				"business_name": "My Business",
+				"settlement_bank": "058",
+				"account_number": "1234567890",
+				"percentage_charge": 0.5	
+			}
+		}
+	)
+     	 
+class BankDetails(BaseModel):
+    bank: str
+    account_number: str
+    subaccount_code: str
+     
+class TransactionInitializeSchema(BaseModel):
+    amount: int
+    email: EmailStr
+    channels: Optional[List[PaystackChannel]] = None
+    currency: Optional[str] = "NGN"
+    subaccount: Optional[str] = None
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
+            "example": {
+                "amount": 50000,
+                "email": "customer@example.com",
+                "subaccount": "ACCT_8f4s1eq7ml6rlzj",
+                "channels": ["card", "bank_transfer"],
+                "currency": "NGN"
+            }
+        }
+    )

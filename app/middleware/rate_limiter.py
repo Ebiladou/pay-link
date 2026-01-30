@@ -14,7 +14,7 @@ class RouteRateLimit:
 
 DEFAULT_ROUTES = [
     RouteRateLimit(path="/auth/login", requests=5, seconds=60), 
-    RouteRateLimit(path="/auth/signup", requests=3, seconds=60), 
+    RouteRateLimit(path="/auth/signup", requests=3, seconds=60)
 ]
 
 class RateLimiterMiddleware(BaseHTTPMiddleware):    

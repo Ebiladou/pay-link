@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.routes.auth import auth_router
 from app.routes.user import user_router
+from app.routes.links import link_router
+from app.routes.payment import payment_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.auth_middleware import AuthMiddleware
@@ -34,7 +36,9 @@ def create_fastapi_app(environment: str = "dev", title: str = "", root_path: str
 def setup_routes(app: FastAPI) -> None:
 	routes = [
 		(user_router, ["User"]),
-		(auth_router, ["Auth"])
+		(auth_router, ["Auth"]),
+		(link_router, ["Links"]),
+		(payment_router, ["Payments"]),
 	]
 
 	for router, tags, in routes:
@@ -63,7 +67,7 @@ async def lifespan(app: FastAPI):
 	
 	# Shutdown email worker
 	if _worker_thread and _worker_thread.is_alive():
-		logger.info("Shutting down email worker...")
+		logger.info("Shutting down email worker")
 		rabbitmq.close()
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
