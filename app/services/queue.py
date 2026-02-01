@@ -1,37 +1,38 @@
-import pika
+import redis
 from typing import Optional
 from app.core.logger import logger
 
 QUEUE_EMAIL = "email_tasks"
 
-class RabbitMQ:    
-    def __init__(self, host: str = "localhost", port: int = 5672):
+class RedisQueue:    
+    def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0):
         self.host = host
         self.port = port
-        self._connection: Optional[pika.BlockingConnection] = None
-        self._channel: Optional[pika.adapters.blocking_connection.BlockingChannel] = None
+        self.db = db
+        self._client: Optional[redis.Redis] = None
 
-    def get_channel(self) -> pika.adapters.blocking_connection.BlockingChannel:
-        if self._connection is None or self._connection.is_closed:
-            credentials = pika.PlainCredentials("guest", "guest")
-            parameters = pika.ConnectionParameters(
-                host=self.host,
-                port=self.port,
-                credentials=credentials,
-                connection_attempts=3,
-                retry_delay=2
-            )
-            self._connection = pika.BlockingConnection(parameters)
-            logger.info("RabbitMQ connected")
+    def get_client(self) -> redis.Redis:
+        if self._client is None:
+            try:
+                self._client = redis.Redis(
+                    host=self.host,
+                    port=self.port,
+                    db=self.db,
+                    decode_responses=True,
+                    socket_connect_timeout=5,
+                    socket_keepalive=True
+                )
+                self._client.ping()
+                logger.info("Redis connected")
+            except Exception as e:
+                logger.error(f"Failed to connect to Redis: {e}")
+                raise
         
-        if self._channel is None or self._channel.is_closed:
-            self._channel = self._connection.channel()
-        
-        return self._channel
+        return self._client
 
     def close(self) -> None:
-        if self._connection and not self._connection.is_closed:
-            self._connection.close()
-            logger.info("RabbitMQ disconnected")
+        if self._client:
+            self._client.close()
+            logger.info("Redis disconnected")
 
-rabbitmq = RabbitMQ()
+redis_queue = RedisQueue()

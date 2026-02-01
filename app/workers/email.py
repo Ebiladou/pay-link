@@ -1,8 +1,7 @@
 import json
 import asyncio
 from typing import Dict, Any, Optional
-import pika
-from app.services.queue import rabbitmq, QUEUE_EMAIL
+from app.services.queue import redis_queue, QUEUE_EMAIL
 from app.core.enum import TemplateType
 from app.services.emails import email_service
 from app.core.logger import logger
@@ -15,8 +14,7 @@ async def queue_email(
     variables: Optional[Dict[str, Any]] = None,
 ) -> bool:
     try:
-        channel = rabbitmq.get_channel()
-        channel.queue_declare(queue=QUEUE_EMAIL, durable=True)
+        client = redis_queue.get_client()
         
         message = {
             "template_name": template_name.value,
@@ -26,63 +24,57 @@ async def queue_email(
             "variables": variables or {},
         }
         
-        channel.basic_publish(
-            exchange="",
-            routing_key=QUEUE_EMAIL,
-            body=json.dumps(message),
-            properties=pika.BasicProperties(delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE),
-        )
-        
+        client.rpush(QUEUE_EMAIL, json.dumps(message))
         logger.info(f"Email queued for {email}")
         return True
     except Exception as e:
         logger.error(f"Failed to queue email: {e}")
         return False
 
-def process_email_message(channel, method, properties, body):
-    """Process a single email message from the queue"""
+def process_email_message(message: str):
     try:
-        message = json.loads(body)
-        logger.info(f"Processing email for {message['email']}")
+        data = json.loads(message)
+        logger.info(f"Processing email for {data['email']}")
         
-        # Run async email send in sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             result = loop.run_until_complete(
                 email_service.send_email(
-                    template_name=TemplateType(message["template_name"]),
-                    subject=message["subject"],
-                    email=message["email"],
-                    name=message["name"],
-                    variables=message.get("variables"),
+                    template_name=TemplateType(data["template_name"]),
+                    subject=data["subject"],
+                    email=data["email"],
+                    name=data["name"],
+                    variables=data.get("variables"),
                 )
             )
             
             if result:
-                logger.info(f"Email sent to {message['email']}")
-                channel.basic_ack(delivery_tag=method.delivery_tag)
+                logger.info(f"Email sent to {data['email']}")
             else:
-                logger.warning(f"Email failed for {message['email']}, requeuing...")
-                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                logger.warning(f"Email failed for {data['email']}, requeuing...")
+                redis_queue.get_client().rpush(QUEUE_EMAIL, message)
         finally:
             loop.close()
             
     except Exception as e:
         logger.error(f"Error processing email: {e}")
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        redis_queue.get_client().rpush(QUEUE_EMAIL, message)
 
 
 def start_email_worker():
-    """Start consuming email tasks from queue"""
     try:
-        channel = rabbitmq.get_channel()
-        channel.queue_declare(queue=QUEUE_EMAIL, durable=True)
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue=QUEUE_EMAIL, on_message_callback=process_email_message)
+        client = redis_queue.get_client()
         
         logger.info(f"Email worker started, listening on {QUEUE_EMAIL}")
-        channel.start_consuming()
+    
+        while True:
+            message = client.blpop(QUEUE_EMAIL, timeout=30)
+            
+            if message:
+                _, message_content = message
+                process_email_message(message_content)
+                
     except KeyboardInterrupt:
         logger.info("Email worker interrupted")
     except Exception as e:

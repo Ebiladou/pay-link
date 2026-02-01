@@ -23,10 +23,6 @@ class Settings(BaseSettings):
 
 	MAILERSEND_KEY: str
 
-	# rabbitmq
-	RABBITMQ_USER: str = "guest"
-	RABBITMQ_PASSWORD: str = "guest"
-
 	# paystack
 	PAYSTACK_PUBLIC_KEY: str
 	PAYSTACK_SECRET_KEY: str

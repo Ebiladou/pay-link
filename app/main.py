@@ -7,11 +7,15 @@ from app.routes.payment import payment_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.auth_middleware import AuthMiddleware
-from app.middleware.rate_limiter import RateLimiterMiddleware, RouteRateLimit
+from app.middleware.rate_limiter import RateLimiterMiddleware
 from app.workers.email import start_email_worker
-from app.services.queue import rabbitmq
+from app.services.queue import redis_queue
 from app.core.logger import logger
 import threading
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.workers.scheduler import cleanup_deleted_users
+
+scheduler = AsyncIOScheduler()
 
 ## set up cors later
 
@@ -45,9 +49,9 @@ def setup_routes(app: FastAPI) -> None:
 		app.include_router(router, tags=tags)
 
 # Global worker thread
-_worker_thread = None
+worker_thread = None
 
-def _run_worker():
+def run_worker():
 	try:
 		start_email_worker()
 	except Exception as e:
@@ -55,20 +59,36 @@ def _run_worker():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-	global _worker_thread
+	global worker_thread
 	await init_db()
 	
 	# Start email worker in background thread
-	_worker_thread = threading.Thread(target=_run_worker, daemon=True)
-	_worker_thread.start()
+	worker_thread = threading.Thread(target=run_worker, daemon=True)
+	worker_thread.start()
 	logger.info("Email worker thread started")
+	
+	# Start APScheduler for cleanup tasks
+	scheduler.add_job(
+        cleanup_deleted_users,
+        "cron",
+        hour=3,
+        minute=0,
+        id="cleanup_deleted_users",
+        replace_existing=True
+    )
+	scheduler.start()
+	logger.info("Scheduler started - cleanup job scheduled for 3 AM daily")
 	
 	yield
 	
+	# Shutdown scheduler
+	scheduler.shutdown(wait=True)
+	logger.info("Scheduler shut down")
+	
 	# Shutdown email worker
-	if _worker_thread and _worker_thread.is_alive():
+	if worker_thread and worker_thread.is_alive():
 		logger.info("Shutting down email worker")
-		rabbitmq.close()
+		redis_queue.close()
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)

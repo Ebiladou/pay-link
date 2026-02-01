@@ -8,7 +8,6 @@ PayLink integrates with **Paystack** to handle secure payment transactions. User
 - **Multiple Link Types**:
   - **Closed Links** - Pre-configured with a fixed amount for a specific recipient
   - **Open Links** - Flexible links where customers can enter custom amounts
-  - **Recurring Links** - Setup automatic payment subscriptions
 - **Instant Payments** - Customers pay directly through the link without creating an account
 - **Payment Tracking** - Monitor all payments, refunds, and transaction history
 
@@ -21,7 +20,7 @@ PayLink is built with a modern, scalable architecture:
 - **PostgreSQL Database** - Reliable data persistence with async support
 - **Payment Integration** - Secure integration with Paystack
 - **User Authentication** - JWT-based secure authentication with refresh tokens
-- **Production Ready** - Dockerized, logged, and optimized for scale -> # in view
+- **Production Ready** - Dockerized, logged, and optimized for scale
 
 ## Features
 
@@ -29,7 +28,7 @@ PayLink is built with a modern, scalable architecture:
 - 💳 **Payment Processing** - Integration with Paystack for secure payments
 - 🔗 **Flexible Link Creation** - Multiple link types (closed, open, recurring, etc.)
 - 📊 **Transaction Tracking** - Real-time payment status and history
-- 📧 **Async Email Queue** - RabbitMQ-based email processing (non-blocking)
+- 📧 **Async Email Queue** - Reddit-based email processing (non-blocking)
 - 🔄 **Background Workers** - Email sending in separate threads
 - 📝 **Centralized Logging** - Environment-aware logging with file rotation
 - 🗄️ **PostgreSQL Database** - Using SQLModel and AsyncPG for async database operations
@@ -95,7 +94,6 @@ app.add_middleware(RateLimiterMiddleware, routes=rate_limit_routes)
 
 - Python 3.12+
 - PostgreSQL
-- RabbitMQ
 - Redis
 - pip/virtualenv
 
@@ -166,17 +164,7 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Start RabbitMQ (if not using Docker)
-
-```bash
-# Install or run RabbitMQ locally; docker run is an option:
-docker run -d --name rabbitmq \
-  -p 5672:5672 \
-  -p 15672:15672 \
-  rabbitmq:4-management
-```
-
-5. Start Redis (if not using Docker)
+4. Start Redis (if not using Docker)
 
 ```bash
 docker run -d --name redis \
@@ -184,7 +172,7 @@ docker run -d --name redis \
   redis:7-alpine
 ```
 
-6. Start the Application
+5. Start the Application
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 

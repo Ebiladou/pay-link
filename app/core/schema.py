@@ -212,6 +212,16 @@ class BankDetails(BaseModel):
     bank: str
     account_number: str
     subaccount_code: str
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "bank": "Access Bank",
+                "account_number": "212007634",
+                "subaccount_code": "hy7687gh739"
+			}
+		}
+	)
      
 class TransactionInitializeSchema(BaseModel):
     amount: int

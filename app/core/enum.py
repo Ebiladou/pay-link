@@ -26,7 +26,7 @@ class LinkStatus(str, Enum):
 class PaystackChannel(str, Enum):
     CARD = "card"
     BANK = "bank"
-    APPLE_PAY = "apple_pay"
+    APPLE_PAY = "apple-pay"
     USSD = "ussd"
-    MOBILE_MONEY = "mobile_money"
-    BANK_TRANSFER = "bank_transfer"
+    MOBILE_MONEY = "mobile-money"
+    BANK_TRANSFER = "bank-transfer"
