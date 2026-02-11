@@ -170,9 +170,9 @@ docker run -d --name redis \
 ```
 
 5. Start the Application
+```
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-
 The application will:
 - Start FastAPI server on `http://localhost:8000`
 - Automatically start email worker thread
