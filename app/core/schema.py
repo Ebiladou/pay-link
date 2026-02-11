@@ -118,13 +118,14 @@ class SignInUser(BaseModel):
 		})
      
 class CreateLinkSchema(BaseModel):
-	title: str
-	description: Optional[str] = None
-	amount: int
-	type: LinkType
+    title: str
+    description: Optional[str] = None
+    amount: int
+    email: str
+    type: LinkType
 
-	model_config = ConfigDict(
-		json_schema_extra={
+    model_config = ConfigDict(
+        json_schema_extra={
 			"example": {
 				"title": "Payment for Service",
 				"description": "Payment link for consulting service",
@@ -226,18 +227,25 @@ class BankDetails(BaseModel):
 class TransactionInitializeSchema(BaseModel):
     amount: int
     email: EmailStr
-    channels: Optional[List[PaystackChannel]] = None
     currency: Optional[str] = "NGN"
     subaccount: Optional[str] = None
-
+    reference: Optional[str] = None
+    meta_data: Optional[dict] = None
+    
+    @field_validator("amount")
+    @classmethod
+    def convert_to_kobo(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Amount must be greater than 0")
+        
+        return v * 100
+    
     model_config = ConfigDict(
-        use_enum_values=True,
         json_schema_extra={
             "example": {
                 "amount": 50000,
                 "email": "customer@example.com",
                 "subaccount": "ACCT_8f4s1eq7ml6rlzj",
-                "channels": ["card", "bank_transfer"],
                 "currency": "NGN"
             }
         }

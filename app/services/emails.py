@@ -9,7 +9,7 @@ from mailersend import MailerSendClient
 from mailersend.models.email import EmailRequest, EmailContact
 
 class EmailService:
-    def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "MS_yFSoZW@test-pzkmgq7yorml059v.mlsender.net", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):
+    def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):
         self._api_key = api_key
         self._mail_from = mail_from
         self._mail_from_name = mail_from_name

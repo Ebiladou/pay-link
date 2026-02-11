@@ -31,6 +31,7 @@ class Links(SQLModel, table=True):
     title: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None)
     amount: int = Field (nullable=False)
+    email: str
     type: LinkType
     status: LinkStatus = Field(default=LinkStatus.ACTIVE)
     created_at: datetime = Field(default_factory=datetime.now)
