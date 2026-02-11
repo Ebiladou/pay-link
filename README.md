@@ -5,9 +5,6 @@
 PayLink integrates with **Paystack** to handle secure payment transactions. Users can:
 
 - **Create Payment Links** - Generate unique, shareable links for receiving payments
-- **Multiple Link Types**:
-  - **Closed Links** - Pre-configured with a fixed amount for a specific recipient
-  - **Open Links** - Flexible links where customers can enter custom amounts
 - **Instant Payments** - Customers pay directly through the link without creating an account
 - **Payment Tracking** - Monitor all payments, refunds, and transaction history
 
