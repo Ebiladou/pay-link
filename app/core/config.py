@@ -19,7 +19,6 @@ class Settings(BaseSettings):
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 
 	REDIS_URL: str = "redis://localhost:6379"
-	RESEND_SECRET_KEY: str
 
 	MAILERSEND_KEY: str
 
