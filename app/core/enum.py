@@ -22,11 +22,3 @@ class LinkStatus(str, Enum):
     INACTIVE = "inactive"
     EXPIRED = "expired"
     COMPLETED = "completed"
-
-class PaystackChannel(str, Enum):
-    CARD = "card"
-    BANK = "bank"
-    APPLE_PAY = "apple-pay"
-    USSD = "ussd"
-    MOBILE_MONEY = "mobile-money"
-    BANK_TRANSFER = "bank-transfer"

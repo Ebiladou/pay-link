@@ -83,6 +83,31 @@ async def make_payment(request: Request, link_id: int, session: SessionDep):
     
     return {
         "status": "success",
+        "authorization_url": response["data"]["authorization_url"],
         "access_code": response["data"]["access_code"],
         "reference": reference
+    }
+
+
+@payment_router.post("/verify-payment")
+async def make_payment(request: Request, reference: str, session: SessionDep):
+    result = await session.exec(select(Transactions).where(Transactions.reference==reference))
+    transaction = result.first()
+    if transaction is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction with reference not found"
+        )
+    
+    try:
+        response = await paystack_service.verify_transaction(reference)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"status_code: {e.response.status_code} details: {e.response.text}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=e.response.text
+        )
+    
+    return {
+        "message": response["gateway_response"]
     }

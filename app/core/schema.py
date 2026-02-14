@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr, mo
 from datetime import datetime
 from typing import Optional, List
 import re
-from app.core.enum import LinkType, LinkStatus, PaystackChannel
+from app.core.enum import LinkType, LinkStatus
 
 class UserBase(BaseModel):
     name: str

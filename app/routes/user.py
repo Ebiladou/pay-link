@@ -1,10 +1,13 @@
 from sqlmodel import select
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from app.core.database import SessionDep
-from app.core.schema import UserResponse, UserUpdate
+from app.core.schema import UserResponse, UserUpdate, SubAccountCreateSchema
 from app.core.model import Users
 from app.core.deps import require_user, get_current_user
 from datetime import datetime, UTC
+from app.services.paystack import paystack_service
+from app.core.logger import logger
+import httpx
 
 user_router = APIRouter(prefix="/users")
 
@@ -53,4 +56,41 @@ async def reactivate_account(session: SessionDep, user: Users = Depends(get_curr
     session.add(user)
     await session.commit()
     
-    return {"message": "Account reactivated successfully"}
+    return {
+        "message": "Account reactivated successfully"
+    }
+
+@user_router.post("/add-bank")
+async def add_bank_account(session: SessionDep, data: SubAccountCreateSchema, user: Users = Depends(require_user)):
+
+    account_data = SubAccountCreateSchema(
+        business_name=data.business_name,
+        settlement_bank=data.settlement_bank,
+        account_number=data.account_number
+    )
+    try:
+        response = await paystack_service.create_subaccount(account_data)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"status_code: {e.response.status_code} details: {e.response.text}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=e.response.text
+        )
+    
+    bank_name = response["data"]["settlement_bank"]
+    account_number = response["data"]["account_number"]
+    code = response["data"]["subaccount_code"]
+  
+    user.bank_details.bank = bank_name
+    user.bank_details.account_number = account_number
+    user.bank_details.subaccount_code = code
+    user.updated_at = datetime.now(UTC)
+
+    # Ehnnn. Thinking about it, should've made it non repetitive to assign at once on the user object instead of defining first then assigning. --> eg; user.bank_details.bank = response["data"]["settlement_bank"]. Saying I've moved on sounds lazy, but I genuinly have moved and it's honestly a non issue, just a bit not DRY. Sigh.
+
+    session.add(user)
+    await session.commit()
+
+    return {
+        "message": "Account added successfully"
+    }

@@ -189,7 +189,7 @@ async def reset_password_link(data: UserEmailSchema, session: SessionDep):
         token=generate_token, 
         creator=user.email, 
         token_type=TokenType.RESET_PASSWORD, 
-        created_at=datetime.now(UTC)
+        created_at=datetime.now()
     )
 
     session.add(token)
