@@ -6,7 +6,6 @@ from app.routes.links import link_router
 from app.routes.payment import payment_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
-from app.middleware.auth_middleware import AuthMiddleware
 from app.middleware.rate_limiter import RateLimiterMiddleware
 from app.workers.email import start_email_worker
 from app.services.queue import redis_queue
@@ -67,7 +66,7 @@ async def lifespan(app: FastAPI):
 	worker_thread.start()
 	logger.info("Email worker thread started")
 	
-	# Start APScheduler for cleanup tasks
+	# APScheduler for cleanup tasks
 	scheduler.add_job(
         cleanup_deleted_users,
         "cron",
@@ -94,7 +93,6 @@ app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", life
 setup_routes(app)
 
 app.add_middleware(RateLimiterMiddleware)
-app.add_middleware(AuthMiddleware)
 
 @app.get("/health")
 def health_check():
