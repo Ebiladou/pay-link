@@ -11,7 +11,7 @@ link_router = APIRouter(prefix="/links")
 
 @link_router.post("/", response_model=LinkResponse)
 async def create_link(request: Request, data: CreateLinkSchema, session: SessionDep, user: Users = Depends(require_user)):
-    if user.bank_details == []:
+    if user.bank_details is None:
         raise HTTPException(
             status_code=400,
             detail="Add your bank details before creating a link."
@@ -25,6 +25,7 @@ async def create_link(request: Request, data: CreateLinkSchema, session: Session
         title=data.title,
         description=data.description,
         amount=data.amount,
+        email=data.email,
         type=data.type
     )
 
