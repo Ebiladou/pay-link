@@ -9,10 +9,10 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 class AuthenticationService:
-    def __init__(self):
-        self.secret_key = settings.SECRET_KEY
-        self.algorithm = settings.ALGORITHM
-        self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    def __init__(self, secret_key: str, algorithm: str, access_token_expire_minutes: int):
+        self.secret_key = secret_key  
+        self.algorithm = algorithm
+        self.access_token_expire_minutes = access_token_expire_minutes
         self.refresh_token_expire_days = 7
 
     def create_access_token(self, user_id: EmailStr, token_type: str = "access_token"):
@@ -126,4 +126,8 @@ class AuthenticationService:
             "token_type": "bearer"
         }
     
-authentication_service = AuthenticationService()
+authentication_service = AuthenticationService(
+    secret_key=settings.SECRET_KEY,
+    algorithm=settings.ALGORITHM,
+    access_token_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+)

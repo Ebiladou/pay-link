@@ -6,6 +6,7 @@ from starlette.testclient import TestClient
 from app.core.model import Users, Token
 from app.core.enum import TokenType
 from app.utils.user_utils import hash_password
+import secrets
 
 async def test_signup_ok(client: AsyncClient):
     user_data = {
@@ -83,6 +84,7 @@ async def test_confirm_email_ok(client: AsyncClient, session):
     await session.commit()
 
     token = Token(
+        token="valid-token-123",
         creator=user.email,
         token_type=TokenType.CONFIRM_EMAIL
     )
@@ -91,7 +93,7 @@ async def test_confirm_email_ok(client: AsyncClient, session):
 
     response = await client.get(
         url="auth/confirm-email",
-        params={"token": token.token}
+        params={"token": "valid-token-123"}
     )
 
     assert response.status_code == 200
@@ -255,6 +257,7 @@ async def test_complete_reset_password_ok(client: AsyncClient, session):
     await session.commit()
 
     token = Token(
+        token="reset-token-123",
         creator=user.email,
         token_type=TokenType.RESET_PASSWORD
     )
@@ -264,7 +267,7 @@ async def test_complete_reset_password_ok(client: AsyncClient, session):
     response = await client.post(
         url="auth/password-reset",
         json={
-            "token": token.token,
+            "token": "reset-token-123",
             "password": "newpassword@"
         }
     )

@@ -90,7 +90,7 @@ async def make_payment(request: Request, link_id: int, session: SessionDep):
 
 
 @payment_router.post("/verify-payment")
-async def make_payment(request: Request, reference: str, session: SessionDep):
+async def verify_payment(request: Request, reference: str, session: SessionDep):
     result = await session.exec(select(Transactions).where(Transactions.reference==reference))
     transaction = result.first()
     if transaction is None:

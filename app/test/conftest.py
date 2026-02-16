@@ -9,19 +9,10 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.main import app
-from app.core.config import Settings
 from app.core.database import get_session
 from app.core.model import Users
 from app.utils.user_utils import hash_password
-
-settings = Settings(
-    DATABASE_URL="postgresql+asyncpg://postgres:1022@localhost:5432/paylink-test",
-    SECRET_KEY="$$$cnovui#@@",
-    ALGORITHM="HS256",
-    ACCESS_TOKEN_EXPIRE_MINUTES=10,
-    ENVIRONMENT="test",
-)
-
+from app.core.config import settings
 from sqlalchemy.pool import NullPool
 
 test_engine = create_async_engine(
