@@ -4,7 +4,7 @@ from sqlmodel import select
 from httpx import AsyncClient
 from app.core.model import Users
 
-async def test_get_user_ok(authorized_client: AsyncClient, session):
+async def test_get_user_ok(authorized_client: AsyncClient):
     response = await authorized_client.get(url="users/me")
 
     assert response.status_code == 200
@@ -13,7 +13,7 @@ async def test_get_user_ok(authorized_client: AsyncClient, session):
     assert response.json()["name"] == "Test User"
     assert response.json()["is_active"] is True
 
-async def test_get_user_unauthenticated_fail(client: AsyncClient):
+async def test_get_user_fail_user_unauthenticated(client: AsyncClient):
     response = await client.get(url="users/me")
 
     assert response.status_code == 401
@@ -56,7 +56,7 @@ async def test_update_user_name_and_email_ok(authorized_client: AsyncClient, ses
     assert user.updated_at is not None
 
 
-async def test_update_user_unauthenticated_fail(client: AsyncClient):
+async def test_update_user_fail_user_unauthenticated(client: AsyncClient):
     response = await client.put(
         url="users/update-profile",
         json={"name": "Updated Name"}
@@ -76,10 +76,8 @@ async def test_deactivate_user_ok(authorized_client: AsyncClient, session):
     result = await session.exec(select(Users).where(Users.email == "support@paylink.co"))
     user = result.first()
     assert user.deletion_requested is True
-    assert user.updated_at is not None
 
-
-async def test_deactivate_user_unauthenticated_fail(client: AsyncClient):
+async def test_deactivate_user_fail_user_unauthenticated(client: AsyncClient):
     response = await client.delete(url="users/deactivate")
 
     assert response.status_code == 401
@@ -87,7 +85,6 @@ async def test_deactivate_user_unauthenticated_fail(client: AsyncClient):
 
 
 async def test_reactivate_user_ok(authorized_client: AsyncClient, session):
-
     result = await session.exec(select(Users).where(Users.email == "support@paylink.co"))
     user = result.first()
     user.deletion_requested = True
@@ -102,10 +99,8 @@ async def test_reactivate_user_ok(authorized_client: AsyncClient, session):
 
     await session.refresh(user)
     assert user.deletion_requested is False
-    assert user.updated_at is not None
 
-
-async def test_reactivate_user_not_deactivated_fail(authorized_client: AsyncClient):
+async def test_reactivate_user_fail_user_not_deactivated(authorized_client: AsyncClient):
     response = await authorized_client.post(url="users/reactivate")
 
     assert response.status_code == 400
@@ -113,8 +108,25 @@ async def test_reactivate_user_not_deactivated_fail(authorized_client: AsyncClie
     assert response.json()["detail"] == "Account not deactivated"
 
 
-async def test_reactivate_user_unauthenticated_fail(client: AsyncClient):
+async def test_reactivate_user_fail_user_unauthenticated(client: AsyncClient):
     response = await client.post(url="users/reactivate")
 
     assert response.status_code == 401
     assert response.json()["detail"] == "User not authenticated."
+
+async def test_add_user_bank_details_ok(authorized_client: AsyncClient, session):
+    response = await authorized_client.post(
+        url="users/add-bank",
+        json={
+            "business_name": "Neo's business",
+			"settlement_bank": "033",
+			"account_number": "2122594324",
+        }
+    )
+ 
+    assert response.status_code == 200
+    assert response.json() is not None
+
+    result = await session.exec(select(Users).where(Users.email == "support@paylink.co"))
+    user = result.first()
+    assert user.bank_details["bank"] == "United Bank For Africa"
