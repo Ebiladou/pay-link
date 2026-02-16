@@ -9,11 +9,11 @@ from mailersend import MailerSendClient
 from mailersend.models.email import EmailRequest, EmailContact
 
 class EmailService:
-    def __init__(self, api_key: str = settings.MAILERSEND_KEY, mail_from: str = "", mail_from_name: str = "PayLink", environment: str = settings.ENVIRONMENT, templates_dir: str = "app/templates"):
+    def __init__(self, api_key: str, environment: str, mail_from: str = "", mail_from_name: str = "PayLink", templates_dir: str = "app/templates"):
         self._api_key = api_key
+        self._environment = environment
         self._mail_from = mail_from
         self._mail_from_name = mail_from_name
-        self._environment = environment
         self._client = MailerSendClient(api_key=self._api_key)
         
         self._template_env = Environment(
@@ -32,19 +32,6 @@ class EmailService:
             raise
 
     async def send_email(self, template_name: TemplateType, subject: str, email: str, name: str, variables: Optional[Dict[str, Any]] = None) -> bool:
-        """
-        Send an email using a template.
-        
-        Args:
-            template_name: Name of the template (e.g., 'verify_email', 'reset_password')
-            subject: Email subject line
-            email: Recipient email address
-            name: Recipient name
-            variables: Additional variables to pass to the template
-            
-        Returns:
-            True if email sent successfully, False otherwise
-        """
         try:
             # Prepare template variables
             template_variables = {
@@ -83,4 +70,7 @@ class EmailService:
             logger.error(f"Failed to send email '{template_name}': {e}")
             return False
         
-email_service = EmailService()
+email_service = EmailService(
+    api_key = settings.MAILERSEND_KEY,
+    environment = settings.ENVIRONMENT
+)

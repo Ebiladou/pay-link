@@ -3,7 +3,7 @@ from app.core.logger import logger
 from app.core.schema import SubAccountCreateSchema, TransactionInitializeSchema
 import httpx
 class PaystackService:
-    def __init__(self, secret_key: str = settings.PAYSTACK_SECRET_KEY):
+    def __init__(self, secret_key: str):
         self.secret_key = secret_key
         self.headers = {
             "Authorization": f"Bearer {self.secret_key}",
@@ -102,4 +102,6 @@ class PaystackService:
 
             return response_json
         
-paystack_service = PaystackService()
+paystack_service = PaystackService(
+    secret_key=settings.PAYSTACK_SECRET_KEY
+)

@@ -130,6 +130,7 @@ class CreateLinkSchema(BaseModel):
 				"title": "Payment for Service",
 				"description": "Payment link for consulting service",
 				"amount": 5000,
+                "email": "debtor@gmail.com",
 				"type": "close"
 			}
 		}
