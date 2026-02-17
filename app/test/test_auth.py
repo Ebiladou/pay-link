@@ -6,7 +6,6 @@ from starlette.testclient import TestClient
 from app.core.model import Users, Token
 from app.core.enum import TokenType
 from app.utils.user_utils import hash_password
-import secrets
 
 async def test_signup_ok(client: AsyncClient):
     user_data = {
