@@ -3,9 +3,11 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from app.core.database import SessionDep
 from app.core.schema import CreateLinkSchema, UpdateLinkSchema, LinkResponse
 from app.core.model import Links, Users
+from app.core.enum import LinkStatus
 from app.core.deps import require_user
-from datetime import datetime, UTC
+from datetime import datetime
 import secrets
+from typing import Optional
 
 link_router = APIRouter(prefix="/links")
 
@@ -35,8 +37,16 @@ async def create_link(request: Request, data: CreateLinkSchema, session: Session
     return link
 
 @link_router.get("/", response_model=list[LinkResponse])
-async def get_user_links(request: Request, session: SessionDep, user: Users = Depends(require_user)):
-    result = await session.exec(select(Links).where(Links.creator==user.id))
+async def get_user_links(request: Request, session: SessionDep, page_number: int = 1, page_size: int = 10, status: Optional[LinkStatus] = None, user: Users = Depends(require_user)):
+    query = select(Links).where(Links.creator == user.id)
+
+    if status is not None:
+        query = query.where(Links.status == status)
+
+    offset = (page_number - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+
+    result = await session.exec(query)
     links = result.all()
 
     if links == []:
@@ -74,7 +84,7 @@ async def update_link(request: Request, link_id: int, data: UpdateLinkSchema, se
     updated_link = data.model_dump(exclude_unset=True)
 
     link.sqlmodel_update(updated_link)
-    link.updated_at = datetime.now(UTC)
+    link.updated_at = datetime.now()
     session.add(link)
 
     return link
