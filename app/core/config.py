@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
 	REDIS_URL: str = "redis://localhost:6379"
 
-	MAILERSEND_KEY: str
+	SENDGRID_API_KEY: str
 
 	# paystack
 	PAYSTACK_PUBLIC_KEY: str

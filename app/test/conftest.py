@@ -21,12 +21,11 @@ test_engine = create_async_engine(
     echo=False,
 )
 
-TestSessionLocal = async_sessionmaker(
+TestSession = async_sessionmaker(
     bind=test_engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
-
 
 @pytest.fixture(autouse=True)
 async def test_db():
@@ -41,7 +40,7 @@ async def test_db():
 
 @pytest.fixture
 async def session(test_db) -> AsyncIterator[AsyncSession]:
-    async with TestSessionLocal() as session:
+    async with TestSession() as session:
         yield session
 
 
