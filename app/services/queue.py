@@ -19,6 +19,7 @@ class RedisQueue:
                 self._client = redis.Redis(
                     host=self.host,
                     port=self.port,
+                    password=self.password,
                     db=self.db,
                     decode_responses=True,
                     socket_connect_timeout=5,

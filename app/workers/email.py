@@ -6,13 +6,9 @@ from app.core.enum import TemplateType
 from app.services.emails import email_service
 from app.core.logger import logger
 
-async def queue_email(
-    template_name: TemplateType,
-    subject: str,
-    email: str,
-    name: str,
-    variables: Optional[Dict[str, Any]] = None,
-) -> bool:
+MAX_RETRIES = 5
+
+async def queue_email(template_name: TemplateType, subject: str, email: str, name: str, variables: Optional[Dict[str, Any]] = None):
     try:
         client = redis_queue.get_client()
         
@@ -22,6 +18,7 @@ async def queue_email(
             "email": email,
             "name": name,
             "variables": variables or {},
+            "retry_count": 0,
         }
         
         client.rpush(QUEUE_EMAIL, json.dumps(message))
@@ -34,7 +31,10 @@ async def queue_email(
 def process_email_message(message: str):
     try:
         data = json.loads(message)
-        logger.info(f"Processing email for {data['email']}")
+        retry_count = data.get("retry_count", 0)
+        email = data["email"]
+      
+        logger.info(f"Processing email for {email} (attempt {retry_count + 1}/{MAX_RETRIES})")
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -52,14 +52,28 @@ def process_email_message(message: str):
             if result:
                 logger.info(f"Email sent to {data['email']}")
             else:
-                logger.warning(f"Email failed for {data['email']}, requeuing...")
-                redis_queue.get_client().rpush(QUEUE_EMAIL, message)
+                if retry_count < MAX_RETRIES - 1:
+                    logger.warning(f"Email failed for {email}, requeuing (attempt {retry_count + 1}/{MAX_RETRIES})...")
+                    data["retry_count"] = retry_count + 1
+                    redis_queue.get_client().rpush(QUEUE_EMAIL, json.dumps(data))
+                else:
+                    logger.error(f"Email permanently failed for {email} after {MAX_RETRIES} attempts. Dropping.")
         finally:
             loop.close()
             
     except Exception as e:
         logger.error(f"Error processing email: {e}")
-        redis_queue.get_client().rpush(QUEUE_EMAIL, message)
+
+        try:
+            data = json.loads(message)
+            retry_count = data.get("retry_count", 0)
+            if retry_count < MAX_RETRIES - 1:
+                data["retry_count"] = retry_count + 1
+                redis_queue.get_client().rpush(QUEUE_EMAIL, json.dumps(data))
+            else:
+                logger.error(f"Email permanently failed after {MAX_RETRIES} attempts. Dropping.")
+        except Exception:
+            logger.error("Could not requeue message — malformed payload. Dropping.")
 
 
 def start_email_worker():
