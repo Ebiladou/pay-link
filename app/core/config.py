@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 	REDIS_URL: str
 	REDIS_HOST: str
 	REDIS_PORT: int
+	REDIS_PASSWORD: str | None = None
 
 	SENDGRID_API_KEY: str
 
