@@ -1,11 +1,12 @@
 import redis
 from typing import Optional
 from app.core.logger import logger
+from app.core.config import settings
 
 QUEUE_EMAIL = "email_tasks"
 
 class RedisQueue:    
-    def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0):
+    def __init__(self, host: str, port: int, db: int = 0):
         self.host = host
         self.port = port
         self.db = db
@@ -35,4 +36,7 @@ class RedisQueue:
             self._client.close()
             logger.info("Redis disconnected")
 
-redis_queue = RedisQueue()
+redis_queue = RedisQueue(
+    host=settings.REDIS_HOST,
+    port=int(settings.REDIS_PORT)
+)

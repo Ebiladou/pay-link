@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 
 	REDIS_URL: str
+	REDIS_HOST: str
+	REDIS_PORT: int
 
 	SENDGRID_API_KEY: str
 
