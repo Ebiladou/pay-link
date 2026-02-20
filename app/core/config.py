@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-	REDIS_URL: str = "redis://localhost:6379"
+	REDIS_URL: str
 
 	SENDGRID_API_KEY: str
 

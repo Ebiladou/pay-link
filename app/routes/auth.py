@@ -199,7 +199,7 @@ async def reset_password_link(data: UserEmailSchema, session: SessionDep):
 
     variables = {
         "name": user.name.split(" ")[0],
-        "password_reset_link": reset_link
+        "reset_link": reset_link
     }
 
     await queue_email(
