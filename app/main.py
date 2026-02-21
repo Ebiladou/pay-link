@@ -13,10 +13,17 @@ from app.core.logger import logger
 import threading
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.scheduler import cleanup_deleted_users
+from fastapi.middleware.cors import CORSMiddleware
 
 scheduler = AsyncIOScheduler()
 
-## set up cors later
+origins = (
+    ["http://127.0.0.1:5500", "http://localhost:5500"]
+    # if settings.ENVIRONMENT == "dev"
+    # else [
+    #     "https://paylink.online",
+    # ]
+)
 
 def create_fastapi_app(environment: str = "dev", title: str = "", root_path: str = "/api/v1", lifespan=None) -> FastAPI:
 	config = {
@@ -91,6 +98,14 @@ async def lifespan(app: FastAPI):
 	
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.add_middleware(RateLimiterMiddleware)
 
