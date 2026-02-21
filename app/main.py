@@ -99,6 +99,8 @@ async def lifespan(app: FastAPI):
 app = create_fastapi_app(environment=settings.ENVIRONMENT, title="PayLink", lifespan=lifespan, root_path="/api/v1")
 setup_routes(app)
 
+app.add_middleware(RateLimiterMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -106,8 +108,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(RateLimiterMiddleware)
 
 @app.get("/health")
 def health_check():
