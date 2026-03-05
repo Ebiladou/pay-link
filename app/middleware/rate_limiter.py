@@ -12,17 +12,29 @@ class RouteRateLimit:
     requests: int
     seconds: int
 
-DEFAULT_ROUTES = [
-    RouteRateLimit(path="/auth/login", requests=5, seconds=60), 
-    RouteRateLimit(path="/auth/signup", requests=3, seconds=60)
+SPECIFIC_ROUTES = [
+    RouteRateLimit(path="/auth/login", requests=5, seconds=60),
+    RouteRateLimit(path="/auth/signup", requests=3, seconds=60),
+    RouteRateLimit(path="/auth/forgot-password", requests=3, seconds=60),
+    RouteRateLimit(path="/auth/password-reset", requests=3, seconds=60)
 ]
 
-class RateLimiterMiddleware(BaseHTTPMiddleware):    
-    def __init__(self, app, routes: List[RouteRateLimit] = None):
+DEFAULT_ROUTES = RouteRateLimit(path="*", requests=10, seconds=60)
+
+EXCLUDED_PATHS = {
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/health",
+}
+
+class RateLimiterMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, routes: List[RouteRateLimit] = None, default: RouteRateLimit = None):
         super().__init__(app)
-        self.routes = {route.path: route for route in (routes or DEFAULT_ROUTES)}
+        self.routes = {route.path: route for route in (routes or SPECIFIC_ROUTES)}
+        self.default = default or DEFAULT_ROUTES
         self.redis_client: Optional[redis.Redis] = None
-    
+
     async def get_redis_client(self):
         if self.redis_client is None:
             self.redis_client = await redis.from_url(
@@ -30,7 +42,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
                 decode_responses=True
             )
         return self.redis_client
-    
+
     def get_identifier(self, request: Request):
         user = getattr(request.state, "user", None)
         if user:
@@ -38,43 +50,67 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         else:
             client_ip = request.client.host
             return f"ip:{client_ip}"
-    
-    async def dispatch(self, request: Request, call_next):
-        identifier = self.get_identifier(request)
-        path = request.url.path
-        
-        # Check if this route has a rate limit
-        if path not in self.routes:
-            return await call_next(request)
-        
-        route_config = self.routes[path]
+
+    def resolve_route_config(self, path: str):
+        normalized = path.removeprefix("/api/v1")
+
+        if normalized in EXCLUDED_PATHS:
+            return None
+
+        if normalized in self.routes:
+            return self.routes[normalized]
+
+        return self.default
+
+    async def check_rate_limit(self, redis_client, identifier: str, path: str, config: RouteRateLimit):
         rate_limit_key = f"rate_limit:{identifier}:{path}"
-        
+
+        current_count = await redis_client.incr(rate_limit_key)
+
+        if current_count == 1:
+            await redis_client.expire(rate_limit_key, config.seconds)
+
+        exceeded = current_count > config.requests
+        return exceeded, current_count
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        config = self.resolve_route_config(path)
+
+        if config is None:
+            return await call_next(request)
+
+        identifier = self.get_identifier(request)
+
+        limit_key = "*" if config.path == "*" else path
+
         try:
             redis_client = await self.get_redis_client()
-            
-            # Increment request count
-            current_count = await redis_client.incr(rate_limit_key)
-            
-            # Set expiry on first request
-            if current_count == 1:
-                await redis_client.expire(rate_limit_key, route_config.seconds)
-            
-            # Check if limit exceeded
-            if current_count > route_config.requests:
+            is_limited, current_count = await self.check_rate_limit(redis_client, identifier, limit_key, config)
+
+            if is_limited:
                 return JSONResponse(
                     status_code=429,
-                    content={"detail": f"Rate limit exceeded. Maximum {route_config.requests} requests per {route_config.seconds} seconds."}
+                    content={
+                        "detail": f"Rate limit exceeded. Max {config.requests} requests per {config.seconds}s."
+                    },
+                    headers={
+                        "X-RateLimit-Limit": str(config.requests),
+                        "X-RateLimit-Remaining": "0",
+                        "Retry-After": str(config.seconds),
+                    }
                 )
-            
-            # Process request
+
             response = await call_next(request)
-            
+
+            response.headers["X-RateLimit-Limit"] = str(config.requests)
+            response.headers["X-RateLimit-Remaining"] = str(max(0, config.requests - current_count))
+
             return response
-            
+
         except Exception as e:
             return await call_next(request)
-    
+
     async def close(self):
         if self.redis_client:
             await self.redis_client.close()
