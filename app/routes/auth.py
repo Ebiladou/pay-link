@@ -162,7 +162,7 @@ async def resend_confirmation_mail(data: UserEmailSchema, session: SessionDep):
         "message": "Confirmation mail sent. Check your email to verify your account."
     }
 
-@auth_router.post("/reset-password-request")
+@auth_router.post("/forgot-password")
 async def reset_password_link(data: UserEmailSchema, session: SessionDep):
     result = await session.exec(select(Users).where(Users.email == data.email.lower()))
     user = result.first()
