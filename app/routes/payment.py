@@ -39,6 +39,15 @@ async def make_payment(request: Request, link_id: int, session: SessionDep):
             detail="Payment link is not active"
         )
 
+    result = await session.exec(select(Transactions).where(Transactions.link_id == link.id, Transactions.status != TransactionStatus.FAILED))
+    existing_transaction = result.first()
+
+    if existing_transaction is not None:
+        raise HTTPException(
+            status_code=400, 
+            detail="Payment already made."
+        )
+
     result = await session.exec(select(Users).where(Users.id == link.creator))
     user = result.first()
     if user is None:
@@ -46,7 +55,7 @@ async def make_payment(request: Request, link_id: int, session: SessionDep):
             status_code=404,
             detail="User with link not found"
         )
-    
+
     reference = f"txn_{secrets.token_urlsafe(16)}"
     
     transaction_data = TransactionInitializeSchema(
@@ -70,22 +79,26 @@ async def make_payment(request: Request, link_id: int, session: SessionDep):
             status_code=e.response.status_code,
             detail=e.response.text
         )
+    
+    transaction_reference = response["data"]["reference"]
+    authorization_url = response["data"]["authorization_url"]
+    access_code = response["data"]["access_code"]
 
     transaction = Transactions(
-        payment_link_id=link.id,
+        link_id=link.id,
         amount=link.amount,
-        reference=reference,
         email=link.email,
-        status=TransactionStatus.PENDING
+        status=TransactionStatus.PENDING,
+        reference=transaction_reference
     )
     session.add(transaction)
     await session.commit()
     
     return {
         "status": "success",
-        "authorization_url": response["data"]["authorization_url"],
-        "access_code": response["data"]["access_code"],
-        "reference": reference
+        "authorization_url": authorization_url,
+        "access_code": access_code,
+        "reference": transaction_reference
     }
 
 
@@ -109,5 +122,8 @@ async def verify_payment(request: Request, reference: str, session: SessionDep):
         )
     
     return {
-        "message": response["gateway_response"]
+        "status": response["data"]["status"],
+        "amount_paid": response["data"]["amount"],
+        "payment channel": response["data"]["channel"],
+        "time paid": response["data"]["paid_at"]
     }
