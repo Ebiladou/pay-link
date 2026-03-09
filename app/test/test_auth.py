@@ -227,7 +227,7 @@ async def test_reset_password_request_ok(client: AsyncClient, session):
     await session.commit()
 
     response = await client.post(
-        url="auth/reset-password-request",
+        url="auth/forgot-password",
         json={"email": user.email}
     )
 
@@ -237,7 +237,7 @@ async def test_reset_password_request_ok(client: AsyncClient, session):
 
 async def test_reset_password_request_fail_user_not_found(client: AsyncClient):
     response = await client.post(
-        url="auth/reset-password-request",
+        url="auth/forgot-password",
         json={"email": "nonexistent@example.com"}
     )
 
