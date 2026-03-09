@@ -273,7 +273,7 @@ class NotificationCreate(NotificationBase):
         json_schema_extra={
             "example": {
                 "user_id": 1,
-                "message": "Your payment of 5000 NGN has been received"
+                "message": "You received 5000 NGN from customer@example.com for reference txn_abc123."
             }
         }
     )
@@ -287,9 +287,9 @@ class NotificationResponse(NotificationBase):
         from_attributes=True,
         json_schema_extra={
             "example": {
-                "id": 123,
+                "id": 1,
                 "user_id": 1,
-                "message": "Your payment of 5000 NGN has been received",
+                "message": "You received 5000 NGN from customer@example.com for reference txn_abc123.",
                 "is_read": False,
                 "created_at": "2026-03-10T12:00:00Z"
             }

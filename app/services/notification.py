@@ -11,13 +11,13 @@ class NotificationService:
         transaction: Transactions,
     ):
 
-        message = f"You received {transaction.amount} on reference {transaction.reference}."
+        message = f"You received {transaction.amount} NGN from {transaction.email} for reference {transaction.reference}."
 
         notification = Notifications(
             user_id=user.id,
             message=message
         )
-        
+
         session.add(notification)
         await session.commit()
 
