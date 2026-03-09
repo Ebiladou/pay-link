@@ -34,6 +34,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         self.routes = {route.path: route for route in (routes or SPECIFIC_ROUTES)}
         self.default = default or DEFAULT_ROUTES
         self.redis_client: Optional[redis.Redis] = None
+        self.enabled = settings.ENVIRONMENT != "test"
 
     async def get_redis_client(self):
         if self.redis_client is None:
@@ -74,6 +75,9 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         return exceeded, current_count
 
     async def dispatch(self, request: Request, call_next):
+        if not self.enabled:
+            return await call_next(request)
+        
         path = request.url.path
         config = self.resolve_route_config(path)
 
