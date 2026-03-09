@@ -262,3 +262,36 @@ class WebhookEvent(BaseModel):
             }
         }
     )
+
+
+class NotificationBase(BaseModel):
+    user_id: int
+    message: str
+
+class NotificationCreate(NotificationBase):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_id": 1,
+                "message": "Your payment of 5000 NGN has been received"
+            }
+        }
+    )
+
+class NotificationResponse(NotificationBase):
+    id: int
+    is_read: bool
+    created_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "id": 123,
+                "user_id": 1,
+                "message": "Your payment of 5000 NGN has been received",
+                "is_read": False,
+                "created_at": "2026-03-10T12:00:00Z"
+            }
+        }
+    )

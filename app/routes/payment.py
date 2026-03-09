@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from app.core.database import SessionDep
 from app.core.schema import LinkResponse, LinkStatus, TransactionInitializeSchema, WebhookEvent
 from app.core.enum import TransactionStatus, PaystackWebhookEvent
+from app.services.notification import notification_service
 from app.core.model import Links, Transactions, Users
 from app.core.config import settings
 import secrets
@@ -187,6 +188,15 @@ async def paystack_webhook(request: Request, session: SessionDep):
                 session.add(transaction)
                 await session.commit()
                 logger.info(f"Transaction {reference} updated to SUCCESS")
+
+                # resolve link creator and notify user of successful payment
+                link_result = await session.exec(select(Links).where(Links.id == transaction.link_id))
+                link = link_result.first()
+                if link:
+                    user_result = await session.exec(select(Users).where(Users.id == link.creator))
+                    user = user_result.first()
+                    if user is not None:
+                        await notification_service.transaction_success(session, user, transaction)
             else:
                 logger.warning(f"Transaction with reference {reference} not found")
     
