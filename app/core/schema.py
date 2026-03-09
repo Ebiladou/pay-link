@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr, mo
 from datetime import datetime
 from typing import Optional, List
 import re
-from app.core.enum import LinkType, LinkStatus
+from app.core.enum import LinkType, LinkStatus, PaystackWebhookEvent
 
 class UserBase(BaseModel):
     name: str
@@ -248,6 +248,17 @@ class TransactionInitializeSchema(BaseModel):
                 "email": "customer@example.com",
                 "subaccount": "ACCT_8f4s1eq7ml6rlzj",
                 "currency": "NGN"
+            }
+        }
+    )
+
+class WebhookEvent(BaseModel):
+    event: PaystackWebhookEvent
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event": "charge.success"
             }
         }
     )

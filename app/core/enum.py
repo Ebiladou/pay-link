@@ -22,3 +22,7 @@ class LinkStatus(str, Enum):
     INACTIVE = "inactive"
     EXPIRED = "expired"
     COMPLETED = "completed"
+
+class PaystackWebhookEvent(str, Enum):
+    CHARGE_SUCCESS = "charge.success"
+    CHARGE_FAILED = "charge.failed"
