@@ -192,7 +192,7 @@ async def paystack_webhook(request: Request, session: SessionDep):
                 # resolve link creator and notify user of successful payment
                 link_result = await session.exec(select(Links).where(Links.id == transaction.link_id))
                 link = link_result.first()
-                if link:
+                if link is not None:
                     user_result = await session.exec(select(Users).where(Users.id == link.creator))
                     user = user_result.first()
                     if user is not None:

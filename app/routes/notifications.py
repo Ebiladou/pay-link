@@ -1,19 +1,50 @@
 from sqlmodel import select
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from app.core.database import SessionDep
 from app.core.deps import require_user, get_current_user
-from app.core.model import Transactions, Links, Users, Notifications
+from app.core.model import Users, Notifications
 from app.core.schema import NotificationResponse
+from datetime import datetime
+from typing import Optional
 
 notifications_router = APIRouter(prefix="/notifications")
 
-@notifications_router.get("/", response_model=list[NotificationResponse])
-async def list_notifications(
-    session: SessionDep,
-    user: Users = Depends(require_user)
-):
-    result = await session.exec(select(Notifications).where(Notifications.user_id == user.id))
-    notifications = result.all()
-    return notifications
+@notifications_router.get("/{id}", response_model=NotificationResponse)
+async def get_notification(id: int, session: SessionDep, user: Users = Depends(require_user)):
+    result = await session.exec(select(Notifications).where(Notifications.id == id, Notifications.user_id == user.id))
+    notification = result.first()
 
-# Additional routes for marking notifications as read, deleting notifications, et al.
+    if notification is None:
+        raise HTTPException(
+            status_code=404, 
+            detail="Notification not found"
+        )
+
+    notification.is_read = True
+    notification.updated_at = datetime.now()
+
+    session.add(notification)
+    await session.commit()
+
+    return notification
+
+@notifications_router.get("/", response_model=list[NotificationResponse])
+async def list_notifications(session: SessionDep, page_number: int = 1, page_size: int = 10, is_read: Optional[bool] = None, user: Users = Depends(require_user)):
+    query = select(Notifications).where(Notifications.user_id == user.id)
+
+    if is_read is not None:
+        query = query.where(Notifications.is_read == is_read)
+
+    offset = (page_number - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+
+    result = await session.exec(query)
+    notifications = result.all()
+
+    if notifications == []:
+        raise HTTPException(
+            status_code=404,
+            detail="No notifications found"
+        )
+
+    return notifications
