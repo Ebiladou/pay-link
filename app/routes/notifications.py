@@ -1,9 +1,10 @@
 from sqlmodel import select
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 from app.core.database import SessionDep
-from app.core.deps import require_user, get_current_user
+from app.core.deps import require_user
 from app.core.model import Users, Notifications
-from app.core.schema import NotificationResponse
+from app.core.schema import NotificationResponse, AggNotificationResponse
 from datetime import datetime
 from typing import Optional
 
@@ -28,23 +29,29 @@ async def get_notification(id: int, session: SessionDep, user: Users = Depends(r
 
     return notification
 
-@notifications_router.get("/", response_model=list[NotificationResponse])
+@notifications_router.get("/", response_model=AggNotificationResponse)
 async def list_notifications(session: SessionDep, page_number: int = 1, page_size: int = 10, is_read: Optional[bool] = None, user: Users = Depends(require_user)):
     query = select(Notifications).where(Notifications.user_id == user.id)
 
     if is_read is not None:
         query = query.where(Notifications.is_read == is_read)
 
-    offset = (page_number - 1) * page_size
-    query = query.offset(offset).limit(page_size)
+    total_count = await session.exec(select(func.count()).select_from(query.subquery()))
+    total = total_count.one()
 
-    result = await session.exec(query)
+    offset = (page_number - 1) * page_size
+    paginated_query = query.offset(offset).limit(page_size)
+
+    result = await session.exec(paginated_query)
     notifications = result.all()
 
     if notifications == []:
         raise HTTPException(
-            status_code=404,
+            status_code=404, 
             detail="No notifications found"
         )
 
-    return notifications
+    return AggNotificationResponse(
+        total=total,
+        data=notifications
+    )

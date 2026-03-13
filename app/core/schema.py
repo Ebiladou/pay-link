@@ -295,3 +295,24 @@ class NotificationResponse(NotificationBase):
             }
         }
     )
+
+class AggNotificationResponse(BaseModel):
+    total: int
+    data: list[NotificationResponse]
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 10,
+                "data": [
+                    {
+                        "id": 1,
+                        "user_id": 1,
+                        "message": "You received 5000 NGN from customer@example.com for reference txn_abc123.",
+                        "is_read": False,
+                        "created_at": "2026-03-10T12:00:00Z"
+                    }
+                ]
+            }
+        }
+    )
