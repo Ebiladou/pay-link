@@ -48,10 +48,10 @@ class Transactions(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-
 class Notifications(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id")
+    transaction_id: int = Field(foreign_key="transactions.id")
     message: str
     is_read: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
