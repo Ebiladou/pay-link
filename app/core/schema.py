@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr, mo
 from datetime import datetime
 from typing import Optional, List
 import re
-from app.core.enum import LinkType, LinkStatus, PaystackWebhookEvent
+from app.core.enum import LinkType, LinkStatus, PaystackWebhookEvent, TransactionStatus
 
 class UserBase(BaseModel):
     name: str
@@ -179,6 +179,31 @@ class LinkResponse(BaseModel):
 			}
 		}
 	)
+
+class AggLinkResponse(BaseModel):
+    total: int
+    data: List[LinkResponse]
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 1,
+                "data": [
+                     {
+                       "id": 1,
+                        "creator": 1,
+                        "token": "mkjk867bnsdy78879snb789909u89090fhjjk",
+                        "title": "Payment for Service",
+                        "description": "Payment link for consulting service",
+                        "amount": 5000,
+                        "type": "close",
+                        "status": "active",
+                        "created_at": "2023-01-01T00:00:00Z"   
+                     }
+                ]
+            }
+        }
+	)
     
 class BankCreateSchema(BaseModel):
     account_number: str
@@ -284,7 +309,6 @@ class NotificationResponse(NotificationBase):
     created_at: datetime
 
     model_config = ConfigDict(
-        from_attributes=True,
         json_schema_extra={
             "example": {
                 "id": 1,
@@ -310,6 +334,49 @@ class AggNotificationResponse(BaseModel):
                         "user_id": 1,
                         "message": "You received 5000 NGN from customer@example.com for reference txn_abc123.",
                         "is_read": False,
+                        "created_at": "2026-03-10T12:00:00Z"
+                    }
+                ]
+            }
+        }
+    )
+
+class TransactionResponse(BaseModel):
+    id: int
+    link_name: str
+    amount: int
+    email: str
+    status: TransactionStatus
+    created_at: datetime
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": 1,
+                "link_name": "Payment for services",
+                "amount": 5000,
+                "email": "jay@example.com",
+                "status": "success",
+                "created_at": "2026-03-10T12:00:00Z"
+            }
+        }
+    )
+
+class AggTransactionResponse(BaseModel):
+    total: int
+    data: List[TransactionResponse]
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 10,
+                "data": [
+                    {
+                        "id": 1,
+                        "link_name": "Payment for services",
+                        "amount": 5000,
+                        "email": "jay@example.com",
+                        "status": "success",
                         "created_at": "2026-03-10T12:00:00Z"
                     }
                 ]
