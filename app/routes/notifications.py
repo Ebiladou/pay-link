@@ -21,11 +21,12 @@ async def get_notification(id: int, session: SessionDep, user: Users = Depends(r
             detail="Notification not found"
         )
 
-    notification.is_read = True
-    notification.updated_at = datetime.now()
+    if notification.is_read is False:
+        notification.is_read = True
+        notification.updated_at = datetime.now()
 
-    session.add(notification)
-    await session.commit()
+        session.add(notification)
+        await session.commit()
 
     return notification
 

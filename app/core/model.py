@@ -39,6 +39,7 @@ class Links(SQLModel, table=True):
 
 class Transactions(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
+    owner: EmailStr
     link_id: int = Field(foreign_key="links.id")
     amount: int = Field(nullable=False)
     email: str
