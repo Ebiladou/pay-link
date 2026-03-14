@@ -175,43 +175,35 @@ async def paystack_webhook(request: Request, session: SessionDep):
     
     event = WebhookEvent(event=event_data["event"])
     data = event_data["data"]
-    logger.info(f"Received Paystack webhook event: {event.event}")
-    
-    if event.event == PaystackWebhookEvent.CHARGE_SUCCESS:
-        reference = data.get("reference")
-        if reference:
-            result = await session.exec(select(Transactions).where(Transactions.reference == reference))
-            transaction = result.first()
-            if transaction is not None:
-                transaction.status = TransactionStatus.SUCCESS
-                transaction.updated_at = datetime.now(UTC)
-                session.add(transaction)
-                await session.commit()
-                logger.info(f"Transaction {reference} updated to SUCCESS")
+    reference = data.get("reference")
 
-                # resolve link creator and notify user of successful payment
-                link_result = await session.exec(select(Links).where(Links.id == transaction.link_id))
-                link = link_result.first()
-                if link is not None:
-                    user_result = await session.exec(select(Users).where(Users.id == link.creator))
-                    user = user_result.first()
-                    if user is not None:
-                        await notification_service.transaction_success(session, user, transaction)
-            else:
-                logger.warning(f"Transaction with reference {reference} not found")
-    
+    result = await session.exec(select(Transactions).where(Transactions.reference == reference))
+    transaction = result.first()
+
+    if transaction is None:
+        logger.warning(f"Transaction with reference {reference} not found")
+        return {"status": "ok"}
+
+    if event.event == PaystackWebhookEvent.CHARGE_SUCCESS:
+        transaction.status = TransactionStatus.SUCCESS
+        transaction.updated_at = datetime.now()
+        session.add(transaction)
+        await session.commit()
+        logger.info(f"Transaction {reference} updated to SUCCESS")
+
+        link_result = await session.exec(select(Links).where(Links.id == transaction.link_id))
+        link = link_result.first()
+        if link is not None:
+            user_result = await session.exec(select(Users).where(Users.id == link.creator))
+            user = user_result.first()
+            if user is not None:
+                await notification_service.transaction_success(session, user, transaction)
+
     elif event.event == PaystackWebhookEvent.CHARGE_FAILED:
-        reference = data.get("reference")
-        if reference:
-            result = await session.exec(select(Transactions).where(Transactions.reference == reference))
-            transaction = result.first()
-            if transaction is not None:
-                transaction.status = TransactionStatus.FAILED
-                transaction.updated_at = datetime.now(UTC)
-                session.add(transaction)
-                await session.commit()
-                logger.info(f"Transaction {reference} updated to FAILED")
-            else:
-                logger.warning(f"Transaction with reference {reference} not found")
+        transaction.status = TransactionStatus.FAILED
+        transaction.updated_at = datetime.now(UTC)
+        session.add(transaction)
+        await session.commit()
+        logger.info(f"Transaction {reference} updated to FAILED")
     
     return {"status": "ok"}
