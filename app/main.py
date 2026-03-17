@@ -4,6 +4,8 @@ from app.routes.auth import auth_router
 from app.routes.user import user_router
 from app.routes.links import link_router
 from app.routes.payment import payment_router
+from app.routes.notifications import notifications_router
+from app.routes.transaction import transaction_router
 from contextlib import asynccontextmanager
 from app.core.database import init_db
 from app.middleware.rate_limiter import RateLimiterMiddleware
@@ -49,6 +51,8 @@ def setup_routes(app: FastAPI) -> None:
 		(auth_router, ["Auth"]),
 		(link_router, ["Links"]),
 		(payment_router, ["Payments"]),
+		(notifications_router, ["Notifications"]),
+		(transaction_router, ["Transactions"]),
 	]
 
 	for router, tags, in routes:

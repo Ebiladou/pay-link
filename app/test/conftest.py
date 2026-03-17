@@ -16,7 +16,7 @@ from app.core.config import settings
 from sqlalchemy.pool import NullPool
 
 test_engine = create_async_engine(
-    settings.DATABASE_URL,
+   "postgresql+asyncpg://postgres:1022@localhost:5432/paylink-test",
     poolclass=NullPool,
     echo=False,
 )

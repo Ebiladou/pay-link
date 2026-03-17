@@ -13,7 +13,7 @@ PayLink integrates with **Paystack** to handle secure payment transactions. User
 PayLink is built with a modern, scalable architecture:
 
 - **FastAPI Backend** - High-performance Python API framework
-- **Asynchronous Email Processing** - RabbitMQ-based queue for instant user responses
+- **Asynchronous Email Processing** - Redis queue for instant user responses
 - **PostgreSQL Database** - Reliable data persistence with async support
 - **Payment Integration** - Secure integration with Paystack
 - **User Authentication** - JWT-based secure authentication with refresh tokens
@@ -25,35 +25,45 @@ PayLink is built with a modern, scalable architecture:
 - 💳 **Payment Processing** - Integration with Paystack for secure payments
 - 🔗 **Flexible Link Creation** - Multiple link types (closed, open, recurring, etc.)
 - 📊 **Transaction Tracking** - Real-time payment status and history
-- 📧 **Async Email Queue** - Reddit-based email processing (non-blocking)
-- 🔄 **Background Workers** - Email sending in separate threads
+- 🪝 **Webhook Integration** - Automatic transaction status updates via Paystack webhooks
+- 📧 **Async Email Queue** - Redis queue email processing (non-blocking)
 - 📝 **Centralized Logging** - Environment-aware logging with file rotation
 - 🗄️ **PostgreSQL Database** - Using SQLModel and AsyncPG for async database operations
 - 🎯 **RESTful API** - Clean API endpoints for link and payment management
-- 🔒 **Security First** - HTTPS, CORS protection, secure token handling
+- 🔒 **Security First** - HTTPS, CORS protection, secure token handling, IP whitelisting for webhooks
 - ⏱️ **Rate Limiting** - Redis-backed per-user rate limiting to prevent abuse
 
 ## Architecture
 
 ### Email Queue System
 
-The application uses RabbitMQ to queue emails asynchronously:
+The application uses Redis to queue emails asynchronously:
 
 ```
 User Request (FastAPI Main Thread)
     ↓
-queue_email() → RabbitMQ Queue (instant, non-blocking)
+queue_email() → Redis Queue (instant, non-blocking)
     ↓
 Return response to user immediately
     
 Meanwhile (Background Worker Thread)
     ↓
-start_email_worker() listens on RabbitMQ
+start_email_worker() listens on Redis
     ↓
-Process message → Send email via MailerSend
+Process message → Send email via Sendgrid
     ↓
 Acknowledge message to queue
 ```
+
+### Webhook Integration
+
+Paystack webhooks are handled securely with signature verification and IP whitelisting:
+
+- **Signature Validation**: HMAC SHA512 signature using Paystack secret key
+- **IP Whitelisting**: Only accepts requests from Paystack's allowed IPs
+- **Event Handling**: Automatically updates transaction status on `charge.success` or `charge.failed` events
+
+Webhook endpoint: `POST /payments/webhook`
 
 ### Rate Limiting
 
@@ -105,7 +115,7 @@ cd pay-link
 
 ### Recommended (Docker quick start)
 
-Run the full development stack (web + Postgres + Redis + RabbitMQ) with `docker-compose`. This is the fastest, most reproducible way to get started.
+Run the full development stack (web + Postgres + Redis) with `docker-compose`. This is the fastest, most reproducible way to get started.
 
 1. Copy the example environment file and set secrets (do NOT commit your `.env`):
 
@@ -177,6 +187,39 @@ The application will:
 - Start FastAPI server on `http://localhost:8000`
 - Automatically start email worker thread
 - Begin listening for email tasks
+- Background tasks runs by 3PM to cleanup deleted users
+
+## Testing
+
+The project uses `pytest` for testing. Tests are located in the `app/test/` directory.
+
+### Running Tests
+
+1. Ensure the virtual environment is activated and dependencies are installed and change your ENVIRONMENT var to test in your `.env` file.
+
+2. Run all tests:
+
+```bash
+pytest
+```
+
+3. Run tests with coverage:
+
+```bash
+pytest --cov=app --cov-report=html
+```
+
+4. Run specific test files:
+
+```bash
+pytest app/test/test_auth.py
+```
+
+### Test Configuration
+
+- `pytest.ini` configures pytest settings.
+- `conftest.py` provides shared fixtures for tests.
+- Tests include authentication, link creation, and user management.
 
 ## Project Structure
 
@@ -186,32 +229,45 @@ pay-link/
 │   ├── core/
 │   │   ├── config.py          # Settings configuration
 │   │   ├── database.py        # Database setup
-│   │   ├── enum.py            # Enums
+│   │   ├── deps.py            # Dependencies
+│   │   ├── enum.py            # Enums (including PaystackWebhookEvent)
 │   │   ├── logger.py          # Centralized logging
 │   │   ├── model.py           # Database models
 │   │   └── schema.py          # Pydantic schemas
 │   ├── middleware/
-│   │   ├── auth_middleware.py # Authentication middleware
 │   │   └── rate_limiter.py    # Rate limiting middleware
 │   ├── routes/
 │   │   ├── auth.py            # Auth endpoints
+│   │   ├── links.py           # Link management endpoints
+│   │   ├── payment.py         # Payment and webhook endpoints
 │   │   └── user.py            # User endpoints
 │   ├── services/
 │   │   ├── auth.py            # Authentication service
-│   │   ├── emails.py          # Email service (MailerSend)
-│   │   └── queue.py           # RabbitMQ connection
-│   ├── workers/
-│   │   └── email.py           # Email queue producer & consumer
+│   │   ├── emails.py          # Email service
+│   │   ├── paystack.py        # Paystack integration service
+│   │   └── queue.py           # Redis connection
 │   ├── templates/
-│   │   └── verify-email.html  # Email templates
+│   │   ├── reset-password.html # Email templates
+│   │   └── verify-email.html
+│   ├── test/
+│   │   ├── conftest.py        # Test configuration
+│   │   ├── test_auth.py       # Auth tests
+│   │   ├── test_link.py       # Link tests
+│   │   └── test_user.py       # User tests
 │   ├── utils/
 │   │   └── user_utils.py      # Utility functions
+│   ├── workers/
+│   │   ├── email.py           # Email queue producer & consumer
+│   │   └── scheduler.py       # Background scheduler
 │   ├── __init__.py
 │   └── main.py                # FastAPI app entry point
+├── docker-compose.yml         # Docker Compose for full stack
+├── Dockerfile                 # Web app Docker image
 ├── logs/                      # Application logs
+├── pytest.ini                 # Pytest configuration
+├── requirements.txt           # Python dependencies
 ├── .env                       # Environment variables
 ├── .env.example              # Example environment file
-├── requirements.txt          # Python dependencies
 └── README.md                 # This file
 ```
 
@@ -234,7 +290,3 @@ MIT
 ## Support
 
 For issues and questions, please create an issue in the repository.
-
-## NB:
-
-This is an ongoing slow project. If you run it now, you have nothing but basic features available. README powered by AI.

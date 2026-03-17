@@ -39,10 +39,20 @@ class Links(SQLModel, table=True):
 
 class Transactions(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
+    owner: EmailStr
     link_id: int = Field(foreign_key="links.id")
     amount: int = Field(nullable=False)
     email: str
     status: TransactionStatus = Field(default=TransactionStatus.PENDING)
     reference: str = Field(unique=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+class Notifications(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id")
+    transaction_id: int = Field(foreign_key="transactions.id")
+    message: str
+    is_read: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)

@@ -1,13 +1,19 @@
 from sqlmodel import select
 from fastapi import APIRouter, HTTPException, Request, Depends
 from app.core.database import SessionDep
-from app.core.schema import LinkResponse, LinkStatus, TransactionInitializeSchema
-from app.core.enum import TransactionStatus
+from app.core.schema import LinkResponse, LinkStatus, TransactionInitializeSchema, WebhookEvent
+from app.core.enum import TransactionStatus, PaystackWebhookEvent
+from app.services.notification import notification_service
 from app.core.model import Links, Transactions, Users
+from app.core.config import settings
 import secrets
 from app.services.paystack import paystack_service
 from app.core.logger import logger
 import httpx
+import hmac
+import hashlib
+import json
+from datetime import datetime, UTC
 
 payment_router = APIRouter(prefix="/payments")
 
@@ -127,3 +133,77 @@ async def verify_payment(request: Request, reference: str, session: SessionDep):
         "payment channel": response["data"]["channel"],
         "time paid": response["data"]["paid_at"]
     }
+
+@payment_router.post("/webhook")
+async def paystack_webhook(request: Request, session: SessionDep):
+    allowed_ips = ["52.31.139.75", "52.49.173.169", "52.214.14.220"]
+    client_ip = request.client.host
+    if client_ip not in allowed_ips:
+        logger.error(f"Webhook request from unauthorized IP: {client_ip}")
+        raise HTTPException(
+            status_code=403, 
+            detail="Unauthorized IP"
+        )
+    
+    body = await request.body()
+
+    signature = request.headers.get("x-paystack-signature")
+    if not signature:
+        logger.error("No Paystack signature provided")
+        raise HTTPException(
+            status_code=400, 
+            detail="No signature provided"
+        )
+    
+    secret = settings.PAYSTACK_SECRET_KEY.encode("utf-8")
+    expected_signature = hmac.new(secret, body, digestmod=hashlib.sha512).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected_signature):
+        logger.error("Invalid Paystack signature")
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid signature"
+        )
+
+    try:
+        event_data = json.loads(body)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid JSON body"
+        )
+    
+    event = WebhookEvent(event=event_data["event"])
+    data = event_data["data"]
+    reference = data.get("reference")
+
+    result = await session.exec(select(Transactions).where(Transactions.reference == reference))
+    transaction = result.first()
+
+    if transaction is None:
+        logger.warning(f"Transaction with reference {reference} not found")
+        return {"status": "ok"}
+
+    if event.event == PaystackWebhookEvent.CHARGE_SUCCESS:
+        transaction.status = TransactionStatus.SUCCESS
+        transaction.updated_at = datetime.now()
+        session.add(transaction)
+        await session.commit()
+        logger.info(f"Transaction {reference} updated to SUCCESS")
+
+        link_result = await session.exec(select(Links).where(Links.id == transaction.link_id))
+        link = link_result.first()
+        if link is not None:
+            user_result = await session.exec(select(Users).where(Users.id == link.creator))
+            user = user_result.first()
+            if user is not None:
+                await notification_service.transaction_success(session, user, transaction)
+
+    elif event.event == PaystackWebhookEvent.CHARGE_FAILED:
+        transaction.status = TransactionStatus.FAILED
+        transaction.updated_at = datetime.now(UTC)
+        session.add(transaction)
+        await session.commit()
+        logger.info(f"Transaction {reference} updated to FAILED")
+    
+    return {"status": "ok"}
